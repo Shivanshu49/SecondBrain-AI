@@ -1,36 +1,144 @@
 """
 routes/ai_routes.py — AI-Powered Smart Endpoints
-Uses Gemini to provide task suggestions, daily plans, and deadline alerts.
+Unified API layer for all AI intelligence features.
 """
 
-from fastapi import APIRouter
-from datetime import datetime, timezone
+from fastapi import APIRouter, Query
+from typing import Optional
 
-from database import tasks_collection
+from models.ai import (
+    AIResponse,
+    ScoreResponse,
+    AlertResponse,
+    DecisionResponse,
+    PredictionResponse,
+    ScheduleResponse,
+    MentalStateRequest,
+    MentalStateResponse,
+)
+from services.score_service import calculate_life_score
+from services.alert_service import check_alerts
+from services.decision_service import get_recommended_task
+from services.prediction_service import predict_outcomes
+from services.scheduler_service import generate_daily_schedule
+from services.proactive_service import get_proactive_insight
+from services.mental_service import analyze_mental_state
 from ai_handler import generate_response
-from models import AIResponse
+from utils.helpers import format_tasks_for_prompt, get_today_str
+from database import tasks_collection
 
 router = APIRouter(prefix="/api/ai", tags=["AI Intelligence"])
 
 
-def get_pending_tasks() -> list[dict]:
-    """Fetch all pending tasks from the database."""
-    return list(tasks_collection.find({"status": "pending"}))
-
-
-def format_tasks_for_prompt(tasks: list[dict]) -> str:
-    """Convert task documents into a readable string for the AI prompt."""
-    if not tasks:
-        return "No pending tasks found."
-
-    lines = []
-    for i, task in enumerate(tasks, 1):
-        lines.append(f"{i}. \"{task['title']}\" — Deadline: {task['deadline']}")
-    return "\n".join(lines)
+# ─────────────────────────────────────────────
+# 1. LIFE SCORE
+# ─────────────────────────────────────────────
+@router.get("/score", response_model=ScoreResponse)
+async def get_life_score():
+    """
+    Calculate and return the user's productivity score,
+    stats, streak, and consistency metrics.
+    """
+    data = calculate_life_score()
+    return ScoreResponse(**data)
 
 
 # ─────────────────────────────────────────────
-# 1. SMART SUGGESTIONS
+# 2. FAILURE ALERTS
+# ─────────────────────────────────────────────
+@router.get("/alerts", response_model=AlertResponse)
+async def get_alerts():
+    """
+    Check for failure conditions (low completion, overdue tasks,
+    approaching deadlines) and return severity-based alerts.
+    """
+    alert_data = check_alerts()
+
+    # Generate AI summary if there are alerts
+    ai_summary = ""
+    if alert_data["has_alerts"]:
+        context = alert_data["context"]
+        prompt = f"""You are SecondBrain AI. The user has these issues:
+{context}
+
+Write a brief, direct summary (2-3 sentences) of the situation and what they should do first. Be motivating, not harsh."""
+        ai_summary = await generate_response(prompt)
+
+    return AlertResponse(
+        has_alerts=alert_data["has_alerts"],
+        alerts=alert_data["alerts"],
+        ai_summary=ai_summary,
+    )
+
+
+# ─────────────────────────────────────────────
+# 3. AUTONOMOUS DECISION ENGINE
+# ─────────────────────────────────────────────
+@router.get("/decide", response_model=DecisionResponse)
+async def get_decision():
+    """
+    Analyze pending tasks and use AI to recommend
+    the single best task to work on right now.
+    """
+    result = await get_recommended_task()
+    return DecisionResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 4. LIFE PREDICTION ENGINE
+# ─────────────────────────────────────────────
+@router.get("/predict", response_model=PredictionResponse)
+async def get_prediction():
+    """
+    Collect task data and behavioral patterns,
+    predict success/failure, and provide suggestions.
+    """
+    result = await predict_outcomes()
+    return PredictionResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 5. AUTO SCHEDULER
+# ─────────────────────────────────────────────
+@router.get("/schedule", response_model=ScheduleResponse)
+async def get_schedule(
+    hours: Optional[int] = Query(default=8, ge=1, le=16, description="Available working hours")
+):
+    """
+    Generate a time-blocked daily schedule using AI.
+    """
+    result = await generate_daily_schedule(available_hours=hours)
+    return ScheduleResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 6. PROACTIVE AI (DASHBOARD)
+# ─────────────────────────────────────────────
+@router.get("/proactive")
+async def get_proactive():
+    """
+    Generate a proactive AI suggestion based on
+    the user's current situation (triggered on dashboard load).
+    """
+    result = await get_proactive_insight()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 7. MENTAL STATE DETECTION
+# ─────────────────────────────────────────────
+@router.post("/mental", response_model=MentalStateResponse)
+async def detect_mental_state(request: MentalStateRequest):
+    """
+    Analyze user's text input to detect emotional state
+    and provide supportive, personalized advice.
+    """
+    result = await analyze_mental_state(request.text)
+    return MentalStateResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 8. SMART SUGGESTIONS (kept from v1)
 # ─────────────────────────────────────────────
 @router.get("/suggestions", response_model=AIResponse)
 async def get_suggestions():
@@ -38,11 +146,11 @@ async def get_suggestions():
     Fetch all pending tasks, ask AI to prioritize them,
     and suggest what the user should focus on today.
     """
-    tasks = get_pending_tasks()
+    tasks = list(tasks_collection.find({"status": "pending"}))
     task_text = format_tasks_for_prompt(tasks)
-    today = datetime.now(timezone.utc).strftime("%A, %B %d, %Y")
+    today = get_today_str()
 
-    prompt = f"""You are a smart productivity assistant called SecondBrain AI.
+    prompt = f"""You are SecondBrain AI, a smart productivity assistant.
 
 Today is {today}.
 
@@ -56,118 +164,6 @@ Your job:
 4. Keep your response concise, actionable, and motivating.
 
 Format your response with clear numbering and short explanations."""
-
-    result = await generate_response(prompt)
-    return AIResponse(success=True, data=result)
-
-
-# ─────────────────────────────────────────────
-# 2. DAILY PLAN GENERATOR
-# ─────────────────────────────────────────────
-@router.get("/daily-plan", response_model=AIResponse)
-async def get_daily_plan():
-    """
-    Fetch tasks and ask AI to create a structured,
-    time-based daily schedule.
-    """
-    tasks = get_pending_tasks()
-    task_text = format_tasks_for_prompt(tasks)
-    today = datetime.now(timezone.utc).strftime("%A, %B %d, %Y")
-
-    prompt = f"""You are SecondBrain AI, a smart daily planner.
-
-Today is {today}.
-
-Here are the user's pending tasks:
-{task_text}
-
-Your job:
-1. Create a structured daily schedule with specific time blocks (e.g., 9:00 AM - 10:30 AM).
-2. Assign each task to a time slot based on priority and estimated effort.
-3. Include short breaks between tasks.
-4. Add a morning warm-up and evening review slot.
-5. Make the plan realistic and achievable.
-
-Format the plan as a clean, time-based schedule. Use clear formatting."""
-
-    result = await generate_response(prompt)
-    return AIResponse(success=True, data=result)
-
-
-# ─────────────────────────────────────────────
-# 3. ALERTS & PREDICTIONS
-# ─────────────────────────────────────────────
-@router.get("/alerts", response_model=AIResponse)
-async def get_alerts():
-    """
-    Check task deadlines, identify urgent/overdue tasks,
-    and generate AI-powered warnings and predictions.
-    """
-    tasks = get_pending_tasks()
-    now = datetime.now(timezone.utc)
-    today = now.strftime("%A, %B %d, %Y at %I:%M %p UTC")
-
-    # Classify tasks by urgency
-    overdue = []
-    urgent = []  # Due within 24 hours
-    upcoming = []  # Due within 3 days
-    safe = []
-
-    for task in tasks:
-        try:
-            deadline = datetime.fromisoformat(task["deadline"].replace("Z", "+00:00"))
-            if deadline.tzinfo is None:
-                deadline = deadline.replace(tzinfo=timezone.utc)
-            
-            hours_remaining = (deadline - now).total_seconds() / 3600
-
-            entry = f"\"{task['title']}\" — Deadline: {task['deadline']}"
-            if hours_remaining < 0:
-                overdue.append(entry)
-            elif hours_remaining <= 24:
-                urgent.append(entry)
-            elif hours_remaining <= 72:
-                upcoming.append(entry)
-            else:
-                safe.append(entry)
-        except (ValueError, TypeError):
-            # If deadline can't be parsed, treat as urgent
-            urgent.append(f"\"{task['title']}\" — Deadline: {task['deadline']} (⚠️ unparseable date)")
-
-    # Build context for AI
-    context_parts = []
-    if overdue:
-        context_parts.append(f"🔴 OVERDUE TASKS:\n" + "\n".join(overdue))
-    if urgent:
-        context_parts.append(f"🟠 URGENT (due within 24h):\n" + "\n".join(urgent))
-    if upcoming:
-        context_parts.append(f"🟡 UPCOMING (due within 3 days):\n" + "\n".join(upcoming))
-    if safe:
-        context_parts.append(f"🟢 SAFE (due later):\n" + "\n".join(safe))
-
-    if not context_parts:
-        return AIResponse(
-            success=True,
-            data="✅ No pending tasks found. You're all clear! Time to add some new goals."
-        )
-
-    task_context = "\n\n".join(context_parts)
-
-    prompt = f"""You are SecondBrain AI, an intelligent alert and prediction system.
-
-Current time: {today}
-
-Here is the status of the user's tasks:
-{task_context}
-
-Your job:
-1. Generate clear, urgent warnings for overdue and at-risk tasks.
-2. Predict whether the user is falling behind based on the workload and deadlines.
-3. Suggest immediate actions to get back on track.
-4. Be direct and motivating — don't sugarcoat if they're behind.
-5. If everything looks good, give positive reinforcement.
-
-Format your response with emoji-based severity indicators and clear action items."""
 
     result = await generate_response(prompt)
     return AIResponse(success=True, data=result)

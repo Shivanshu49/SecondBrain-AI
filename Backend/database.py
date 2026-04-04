@@ -23,6 +23,7 @@ db = client["secondbrain"]
 
 # Collections
 tasks_collection = db["tasks"]
+activity_collection = db["activity_log"]
 
 
 def check_connection():

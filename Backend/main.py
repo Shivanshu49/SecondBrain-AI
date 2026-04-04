@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SecondBrain AI",
     description="An AI-powered task manager, decision engine, and prediction system.",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -66,6 +66,18 @@ async def health_check():
     return {
         "status": "running",
         "service": "SecondBrain AI",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "message": "🧠 SecondBrain AI Backend is online!",
+        "endpoints": {
+            "tasks": "/api/tasks",
+            "score": "/api/ai/score",
+            "alerts": "/api/ai/alerts",
+            "decide": "/api/ai/decide",
+            "predict": "/api/ai/predict",
+            "schedule": "/api/ai/schedule",
+            "proactive": "/api/ai/proactive",
+            "mental": "/api/ai/mental",
+            "suggestions": "/api/ai/suggestions",
+            "docs": "/docs",
+        },
     }
