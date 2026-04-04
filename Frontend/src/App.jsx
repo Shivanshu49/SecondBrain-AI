@@ -1,17 +1,18 @@
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   ListTodo,
   Brain,
   CalendarClock,
 } from "lucide-react";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import AIAssistant from "./pages/AIAssistant";
 import Schedule from "./pages/Schedule";
 
 const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/tasks", icon: ListTodo, label: "Tasks" },
   { path: "/assistant", icon: Brain, label: "AI Assistant" },
   { path: "/schedule", icon: CalendarClock, label: "Schedule" },
@@ -30,7 +31,6 @@ function Sidebar() {
           <NavLink
             key={item.path}
             to={item.path}
-            end={item.path === "/"}
             className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
           >
             <item.icon size={20} />
@@ -54,7 +54,6 @@ function MobileNav() {
         <NavLink
           key={item.path}
           to={item.path}
-          end={item.path === "/"}
           className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
         >
           <item.icon size={18} />
@@ -65,21 +64,38 @@ function MobileNav() {
   );
 }
 
+function AppLayout() {
+  return (
+    <div className="app-layout">
+      <Sidebar />
+      <main className="main-content">
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/assistant" element={<AIAssistant />} />
+          <Route path="/schedule" element={<Schedule />} />
+        </Routes>
+      </main>
+      <MobileNav />
+    </div>
+  );
+}
+
+function AppRouter() {
+  const location = useLocation();
+  const isLanding = location.pathname === "/";
+
+  if (isLanding) return <Landing />;
+  return <AppLayout />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="app-layout">
-        <Sidebar />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/assistant" element={<AIAssistant />} />
-            <Route path="/schedule" element={<Schedule />} />
-          </Routes>
-        </main>
-        <MobileNav />
-      </div>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/*" element={<AppLayout />} />
+      </Routes>
     </BrowserRouter>
   );
 }
