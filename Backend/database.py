@@ -24,14 +24,15 @@ db = client["secondbrain"]
 # Collections
 tasks_collection = db["tasks"]
 activity_collection = db["activity_log"]
+users_collection = db["users"]
 
 
 def check_connection():
     """Verify MongoDB connection is alive."""
     try:
-        if "<user>" in MONGODB_URI or "cluster.mongodb.net" in MONGODB_URI:
-           print("⚠️ Using dummy/placeholder MONGODB_URI. Update .env with real credentials.")
-           return False
+        if "<user>" in MONGODB_URI or "<password>" in MONGODB_URI:
+            print("⚠️ MONGODB_URI still contains <user> or <password>. Update Backend/.env with real credentials.")
+            return False
 
         client.admin.command("ping")
         print("✅ Connected to MongoDB Atlas successfully!")

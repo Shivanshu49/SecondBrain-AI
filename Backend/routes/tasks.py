@@ -6,6 +6,7 @@ Supports filtering by status, sorting by deadline/priority.
 
 from fastapi import APIRouter, HTTPException, Query
 from bson import ObjectId
+from pymongo import ReturnDocument
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -118,7 +119,7 @@ async def update_task(task_id: str, task_update: TaskUpdate):
     result = tasks_collection.find_one_and_update(
         {"_id": ObjectId(task_id)},
         {"$set": update_data},
-        return_document=True,
+        return_document=ReturnDocument.AFTER,
     )
 
     if not result:

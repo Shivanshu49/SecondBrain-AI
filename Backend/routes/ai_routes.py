@@ -167,3 +167,28 @@ Format your response with clear numbering and short explanations."""
 
     result = await generate_response(prompt)
     return AIResponse(success=True, data=result)
+
+
+# ─────────────────────────────────────────────
+# 9. PRIORITIZE (alias for suggestions)
+# ─────────────────────────────────────────────
+@router.get("/prioritize", response_model=AIResponse)
+async def prioritize_tasks():
+    """
+    Alias for /suggestions — prioritize pending tasks using AI.
+    Kept as a separate route so the frontend can call /prioritize directly.
+    """
+    return await get_suggestions()
+
+
+# ─────────────────────────────────────────────
+# 10. ANALYZE (alias for mental)
+# ─────────────────────────────────────────────
+@router.post("/analyze", response_model=MentalStateResponse)
+async def analyze_user_state(request: MentalStateRequest):
+    """
+    Alias for /mental — analyze user text for emotional state.
+    Kept as a separate route so the frontend can call /analyze directly.
+    """
+    result = await analyze_mental_state(request.text)
+    return MentalStateResponse(**result)

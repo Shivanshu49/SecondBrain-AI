@@ -77,11 +77,11 @@ def check_alerts() -> dict:
 
     # ── Condition 4: No recent completions ──
     from datetime import timedelta
-    recent_completed = [
-        t for t in completed
-        if parse_deadline(t.get("completed_at") or t.get("created_at", ""))
-        and parse_deadline(t.get("completed_at") or t.get("created_at", "")) >= now - timedelta(days=3)
-    ]
+    recent_completed = []
+    for t in completed:
+        dt = parse_deadline(t.get("completed_at") or t.get("created_at", ""))
+        if dt and dt >= now - timedelta(days=3):
+            recent_completed.append(t)
 
     if len(completed) > 0 and len(recent_completed) == 0 and len(pending) > 0:
         alerts.append({

@@ -1,0 +1,355 @@
+/* ===== AI ASSISTANT PAGE ===== */
+.ai-page {
+  min-height: 100vh;
+  padding: 100px 40px 60px;
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.ai-header {
+  margin-bottom: 32px;
+}
+
+.ai-title {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin: 0;
+}
+
+.ai-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 6px;
+  letter-spacing: 0.03em;
+}
+
+/* ── Error ── */
+.ai-error {
+  background: var(--warn);
+  color: var(--black);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  padding: 12px 16px;
+  border: 2px solid var(--black);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.ai-error button {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--black);
+}
+
+/* ── Grid ── */
+.ai-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* ── Card ── */
+.ai-card {
+  border: 2px solid var(--black);
+  background: var(--card);
+  padding: 24px;
+  box-shadow: 5px 5px 0 var(--black);
+  transition: all 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--black);
+}
+
+.ai-card--wide {
+  grid-column: 1 / -1;
+}
+
+.ai-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-card-icon {
+  font-size: 1.4rem;
+}
+
+.ai-card-title {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 0;
+  color: var(--text);
+}
+
+.ai-card-desc {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Action Button ── */
+.ai-action-btn {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  padding: 10px 20px;
+  border: 2px solid var(--black);
+  background: var(--neon);
+  color: var(--black);
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--black);
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  align-self: flex-start;
+}
+
+.ai-action-btn:hover:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--black);
+}
+
+.ai-action-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ── Result ── */
+.ai-result {
+  border-top: 2px dashed var(--muted);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeSlideUp 0.3s ease;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-result-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-result-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.ai-result-summary {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.ai-result-summary--pre {
+  white-space: pre-wrap;
+}
+
+/* ── Prediction badge ── */
+.ai-pred {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border: 2px solid var(--black);
+}
+
+.ai-pred--success {
+  background: #a8e6cf;
+  color: var(--black);
+}
+
+.ai-pred--partial {
+  background: var(--warn);
+  color: var(--black);
+}
+
+.ai-pred--failure {
+  background: #ff6b6b;
+  color: var(--black);
+}
+
+/* ── Confidence badge ── */
+.ai-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border: 1.5px solid var(--black);
+}
+
+.ai-badge--high {
+  background: #a8e6cf;
+  color: var(--black);
+}
+
+.ai-badge--med {
+  background: var(--warn);
+  color: var(--black);
+}
+
+.ai-badge--low {
+  background: #ff6b6b;
+  color: var(--black);
+}
+
+/* ── Suggestions ── */
+.ai-suggestions {
+  background: var(--bg);
+  border: 1.5px solid var(--black);
+  padding: 12px 14px;
+}
+
+.ai-suggestions-title {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.ai-suggestions ul {
+  padding-left: 18px;
+  margin: 0;
+}
+
+.ai-suggestions li {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* ── Mental State ── */
+.ai-mental-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.ai-mental-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  border: 2px solid var(--black);
+  padding: 12px;
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+  min-height: 60px;
+}
+
+.ai-mental-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--neon);
+}
+
+.ai-mental-result {
+  gap: 14px;
+}
+
+.ai-mental-badges {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ai-mental-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-mental-badge-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.ai-mental-badge-value {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.ai-mental-suggestion {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1.5px solid var(--black);
+  padding: 10px 12px;
+}
+
+.ai-mental-response {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text);
+  border-left: 3px solid var(--neon);
+  padding-left: 14px;
+  font-style: italic;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .ai-page {
+    padding: 90px 16px 40px;
+  }
+
+  .ai-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-mental-input-row {
+    flex-direction: column;
+  }
+
+  .ai-action-btn {
+    align-self: stretch;
+    text-align: center;
+  }
+}

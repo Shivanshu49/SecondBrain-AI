@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from database import check_connection
 from routes.tasks import router as tasks_router
 from routes.ai_routes import router as ai_router
+from routes.auth_routes import router as auth_router
 
 
 # ─────────────────────────────────────────────
@@ -43,8 +44,8 @@ app = FastAPI(
 # ─────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (restrict in production)
-    allow_credentials=True,
+    allow_origins=["*"],  # Restrict to specific origins in production
+    allow_credentials=False,  # Must be False when using wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -55,6 +56,7 @@ app.add_middleware(
 # ─────────────────────────────────────────────
 app.include_router(tasks_router)
 app.include_router(ai_router)
+app.include_router(auth_router)
 
 
 # ─────────────────────────────────────────────
@@ -78,6 +80,8 @@ async def health_check():
             "proactive": "/api/ai/proactive",
             "mental": "/api/ai/mental",
             "suggestions": "/api/ai/suggestions",
+            "auth_signup": "/api/auth/signup",
+            "auth_login": "/api/auth/login",
             "docs": "/docs",
         },
     }

@@ -13,15 +13,18 @@ import google.generativeai as genai
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+_model = None
 
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY is not set in the .env file.")
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-
-# Initialize model (gemini-2.0-flash for speed and free-tier compatibility)
-model = genai.GenerativeModel("gemini-2.0-flash")
+def _get_model():
+    """Lazy-init Gemini model so the app can start without a key (AI routes return a fallback)."""
+    global _model
+    if not GEMINI_API_KEY:
+        return None
+    if _model is None:
+        genai.configure(api_key=GEMINI_API_KEY)
+        _model = genai.GenerativeModel("gemini-2.0-flash")
+    return _model
 
 
 async def generate_response(prompt: str) -> str:
@@ -29,6 +32,10 @@ async def generate_response(prompt: str) -> str:
     Send a prompt to Gemini and return the AI-generated text response.
     Includes 1 retry on failure.
     """
+    model = _get_model()
+    if model is None:
+        return "⚠️ GEMINI_API_KEY is not set. Add it to Backend/.env to enable AI features."
+
     for attempt in range(2):
         try:
             response = model.generate_content(prompt)
@@ -56,6 +63,10 @@ async def generate_json_response(prompt: str) -> dict:
     Includes 1 retry on failure.
     """
     json_prompt = prompt + "\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no code fences, no extra text."
+
+    model = _get_model()
+    if model is None:
+        return {"error": "GEMINI_API_KEY is not set. Add it to Backend/.env to enable AI features."}
 
     for attempt in range(2):
         try:
