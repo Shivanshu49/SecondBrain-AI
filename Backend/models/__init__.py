@@ -15,6 +15,15 @@ from models.ai import (
     ScheduleResponse,
     MentalStateRequest,
     MentalStateResponse,
+    NLPCaptureRequest,
+    NLPCaptureResponse,
+    NLPCaptureTaskDetail,
+    GoalRequest,
+    GoalResponse,
+    GoalTaskDetail,
+    BrainDumpRequest,
+    BrainDumpResponse,
+    BrainDumpItem,
 )
 
 __all__ = [
@@ -31,4 +40,13 @@ __all__ = [
     "ScheduleResponse",
     "MentalStateRequest",
     "MentalStateResponse",
+    "NLPCaptureRequest",
+    "NLPCaptureResponse",
+    "NLPCaptureTaskDetail",
+    "GoalRequest",
+    "GoalResponse",
+    "GoalTaskDetail",
+    "BrainDumpRequest",
+    "BrainDumpResponse",
+    "BrainDumpItem",
 ]

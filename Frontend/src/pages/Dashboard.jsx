@@ -10,6 +10,7 @@ import {
   getPrediction,
   getSchedule,
   getProactive,
+  nlpCapture,
 } from '../api/secondbrain.js'
 import '../styles/dashboard.css'
 
@@ -76,6 +77,9 @@ export default function Dashboard() {
   const [proactiveMsg, setProactiveMsg] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [nlpText, setNlpText] = useState('')
+  const [nlpLoading, setNlpLoading] = useState(false)
+  const [nlpSuccess, setNlpSuccess] = useState(null)
   const [confidencePct, setConfidencePct] = useState(72)
 
   const taskInputRef = useRef(null)
@@ -299,6 +303,28 @@ export default function Dashboard() {
     }, 2000)
   }
 
+  const handleNlpCapture = useCallback(async () => {
+    if (!nlpText.trim()) return
+    setNlpLoading(true)
+    setNlpSuccess(null)
+    try {
+      const res = await nlpCapture(nlpText.trim())
+      if (res.success) {
+        setNlpSuccess(res.task?.title || 'Task created!')
+        setNlpText('')
+        setTasks((prev) => [...prev, mapTaskFromApi(res.task)])
+        await refreshScoresOnly()
+        setTimeout(() => setNlpSuccess(null), 4000)
+      } else {
+        setError(res.error || 'Could not parse task')
+      }
+    } catch (e) {
+      setError(e.message || 'NLP capture failed')
+    } finally {
+      setNlpLoading(false)
+    }
+  }, [nlpText, refreshScoresOnly])
+
   return (
     <main className="dashboard-page">
       {error && (
@@ -468,42 +494,33 @@ export default function Dashboard() {
           ></iframe>
         </div>
 
-        <div className="card card-features" id="card-features">
-          <div className="card-label">🚀 UPCOMING FEATURES</div>
-          <div className="features-grid">
-            <div className="feature-item">
-              <span className="feature-icon">🤖</span>
-              <div>
-                <div className="feature-title">AI AUTO-SCHEDULER</div>
-                <div className="feature-desc">Auto-plan your entire week based on deadlines &amp; energy levels</div>
-              </div>
-              <span className="feature-tag feature-tag--soon">SOON</span>
+        <div className="card card-nlp" id="card-nlp">
+          <div className="card-label">⚡ QUICK CAPTURE</div>
+          <p className="nlp-dash-desc">Type anything — AI creates the task for you</p>
+          <div className="nlp-dash-row">
+            <div className="nlp-dash-input-wrap">
+              <span className="nlp-dash-sparkle">✨</span>
+              <input
+                type="text"
+                className="nlp-dash-input"
+                placeholder="e.g. 'Call dentist tomorrow at 3pm'"
+                value={nlpText}
+                onChange={(e) => setNlpText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNlpCapture()}
+                disabled={nlpLoading}
+              />
             </div>
-            <div className="feature-item">
-              <span className="feature-icon">📊</span>
-              <div>
-                <div className="feature-title">DEEP ANALYTICS</div>
-                <div className="feature-desc">Weekly performance reports with AI-driven insights</div>
-              </div>
-              <span className="feature-tag feature-tag--beta">BETA</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">🔗</span>
-              <div>
-                <div className="feature-title">INTEGRATIONS</div>
-                <div className="feature-desc">Connect with GitHub, Notion, Google Calendar &amp; more</div>
-              </div>
-              <span className="feature-tag feature-tag--planned">Q3</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">🧬</span>
-              <div>
-                <div className="feature-title">HABIT DNA</div>
-                <div className="feature-desc">AI maps your habit patterns and suggests optimizations</div>
-              </div>
-              <span className="feature-tag feature-tag--planned">Q4</span>
-            </div>
+            <button
+              className="dash-btn btn-nlp"
+              onClick={handleNlpCapture}
+              disabled={nlpLoading || !nlpText.trim()}
+            >
+              {nlpLoading ? '⏳' : '→'}
+            </button>
           </div>
+          {nlpSuccess && (
+            <div className="nlp-dash-success">✅ Created: {nlpSuccess}</div>
+          )}
         </div>
       </div>
 

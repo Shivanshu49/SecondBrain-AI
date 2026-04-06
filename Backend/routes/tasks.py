@@ -29,6 +29,8 @@ def task_to_response(task: dict) -> dict:
         "hours_spent": task.get("hours_spent", 0.0),
         "created_at": task.get("created_at", ""),
         "completed_at": task.get("completed_at"),
+        "source": task.get("source", "manual"),
+        "group_id": task.get("group_id"),
     }
 
 
@@ -46,6 +48,8 @@ async def create_task(task: TaskCreate):
         "hours_spent": task.hours_spent or 0.0,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "completed_at": None,
+        "source": task.source or "manual",
+        "group_id": task.group_id,
     }
 
     result = tasks_collection.insert_one(task_data)

@@ -4,6 +4,7 @@ import {
   prioritizeTasks,
   getMentalState,
   getSuggestions,
+  brainDump,
 } from '../api/secondbrain.js'
 import FloatingElements from '../components/FloatingElements.jsx'
 import '../styles/ai.css'
@@ -32,6 +33,10 @@ export default function AIAssistant() {
   const [mentalLoading, setMentalLoading] = useState(false)
   const [mentalResult, setMentalResult] = useState(null)
   const [mentalInput, setMentalInput] = useState('')
+  // Brain Dump
+  const [dumpLoading, setDumpLoading] = useState(false)
+  const [dumpResult, setDumpResult] = useState(null)
+  const [dumpInput, setDumpInput] = useState('')
   // Error
   const [error, setError] = useState(null)
 
@@ -88,12 +93,28 @@ export default function AIAssistant() {
     }
   }, [mentalInput])
 
+  const runBrainDump = useCallback(async () => {
+    if (!dumpInput.trim()) return
+    setDumpLoading(true)
+    setDumpResult(null)
+    setError(null)
+    try {
+      const res = await brainDump(dumpInput.trim())
+      setDumpResult(res)
+      if (res.success) setDumpInput('')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setDumpLoading(false)
+    }
+  }, [dumpInput])
+
   return (
     <main className="ai-page">
       <div className="ai-header">
         <h1 className="ai-title">🧠 AI ASSISTANT</h1>
         <p className="ai-subtitle">
-          Powered by Gemini — Predict, Prioritize, and Understand your mental state.
+          Powered by Gemini — Predict, Prioritize, Organize, and Understand.
         </p>
       </div>
 
@@ -105,6 +126,83 @@ export default function AIAssistant() {
       )}
 
       <div className="ai-grid">
+        {/* ── BRAIN DUMP ── */}
+        <div className="ai-card ai-card--wide ai-card--dump" id="card-braindump">
+          <div className="ai-card-header">
+            <span className="ai-card-icon">🧹</span>
+            <h2 className="ai-card-title">BRAIN DUMP</h2>
+          </div>
+          <p className="ai-card-desc">
+            Dump everything on your mind — AI organizes it into Urgent, Later, and Ignore.
+          </p>
+          <div className="ai-dump-input-row">
+            <textarea
+              className="ai-dump-input"
+              placeholder="Dump your thoughts here… e.g. 'I need to finish the project, worried about the exam, should clean my room, the dog needs food, maybe learn a new language someday…'"
+              value={dumpInput}
+              onChange={(e) => setDumpInput(e.target.value)}
+              rows={4}
+            />
+            <button
+              className="ai-action-btn ai-dump-btn"
+              onClick={runBrainDump}
+              disabled={dumpLoading || !dumpInput.trim()}
+            >
+              {dumpLoading ? '⏳ Organizing…' : '🧹 ORGANIZE'}
+            </button>
+          </div>
+          {dumpResult && dumpResult.success && (
+            <div className="dump-result">
+              {dumpResult.summary && (
+                <div className="dump-summary">{dumpResult.summary}</div>
+              )}
+              <div className="dump-columns">
+                <div className="dump-column dump-column--urgent">
+                  <div className="dump-column-header">🔴 URGENT</div>
+                  {dumpResult.urgent?.length === 0 && (
+                    <div className="dump-empty">Nothing urgent!</div>
+                  )}
+                  {dumpResult.urgent?.map((item, i) => (
+                    <div className="dump-item" key={`u-${i}`}>
+                      <div className="dump-item-text">{item.item}</div>
+                      {item.reason && <div className="dump-item-reason">{item.reason}</div>}
+                    </div>
+                  ))}
+                </div>
+                <div className="dump-column dump-column--later">
+                  <div className="dump-column-header">🟡 LATER</div>
+                  {dumpResult.later?.length === 0 && (
+                    <div className="dump-empty">Nothing for later!</div>
+                  )}
+                  {dumpResult.later?.map((item, i) => (
+                    <div className="dump-item" key={`l-${i}`}>
+                      <div className="dump-item-text">{item.item}</div>
+                      {item.reason && <div className="dump-item-reason">{item.reason}</div>}
+                    </div>
+                  ))}
+                </div>
+                <div className="dump-column dump-column--ignore">
+                  <div className="dump-column-header">⚪ IGNORE</div>
+                  {dumpResult.ignore?.length === 0 && (
+                    <div className="dump-empty">Nothing to ignore!</div>
+                  )}
+                  {dumpResult.ignore?.map((item, i) => (
+                    <div className="dump-item" key={`ig-${i}`}>
+                      <div className="dump-item-text">{item.item}</div>
+                      {item.reason && <div className="dump-item-reason">{item.reason}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {dumpResult && !dumpResult.success && (
+            <div className="ai-result ai-result--error">
+              ⚠️ {dumpResult.error || 'Could not organize thoughts. Try again.'}
+            </div>
+          )}
+        </div>
+
         {/* ── PREDICTION ── */}
         <div className="ai-card" id="card-predict">
           <div className="ai-card-header">

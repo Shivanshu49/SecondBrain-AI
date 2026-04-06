@@ -21,8 +21,8 @@
 
 /* Tasks = full-width hero row */
 .card-tasks    { grid-column: 1 / -1; }
-/* Features = full-width bottom row */
-.card-features { grid-column: 1 / -1; }
+/* NLP Quick Capture = full-width bottom row */
+.card-nlp      { grid-column: 1 / -1; }
 
 /* ========== CARD BASE ========== */
 .card {
@@ -760,3 +760,116 @@
 
 [data-theme="dark"] .dashboard-banner--error { background: #2a1515; }
 [data-theme="dark"] .dashboard-proactive { background: #141414; color: #e0e0e0; }
+
+/* ========== NLP QUICK CAPTURE (Dashboard Card) ========== */
+.card-nlp {
+  background: var(--white);
+  border-left: 5px solid var(--neon);
+}
+
+.nlp-dash-desc {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #666;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.nlp-dash-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nlp-dash-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  border: var(--border);
+  background: var(--white);
+  padding: 0 0 0 10px;
+  transition: box-shadow 0.2s ease;
+}
+
+.nlp-dash-input-wrap:focus-within {
+  box-shadow: 0 0 0 3px var(--neon);
+}
+
+.nlp-dash-sparkle {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.nlp-dash-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 10px 10px;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--black);
+}
+
+.btn-nlp {
+  background: var(--neon);
+  box-shadow: var(--shadow-sm);
+  font-size: 1.1rem;
+  padding: 9px 16px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.nlp-dash-success {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #155724;
+  background: #d4edda;
+  border: 2px solid var(--black);
+  padding: 8px 12px;
+  animation: fadeSlideUp 0.3s ease;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dark mode for NLP card */
+[data-theme="dark"] .card-nlp {
+  background: #141414;
+  border-left-color: var(--neon);
+}
+
+[data-theme="dark"] .nlp-dash-desc {
+  color: #888;
+}
+
+[data-theme="dark"] .nlp-dash-input-wrap {
+  background: #1a1a1a;
+  border-color: #000;
+}
+
+[data-theme="dark"] .nlp-dash-input {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .nlp-dash-input::placeholder {
+  color: #555;
+}
+
+[data-theme="dark"] .nlp-dash-success {
+  background: #1a3d2a;
+  color: #a8e6cf;
+  border-color: #333;
+}
+
+[data-theme="dark"] .btn-nlp {
+  background: var(--neon);
+  color: #0a0a0a;
+  border-color: #000;
+  box-shadow: 3px 3px 0 #000;
+}
+

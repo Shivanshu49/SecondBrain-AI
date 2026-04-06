@@ -15,6 +15,12 @@ from models.ai import (
     ScheduleResponse,
     MentalStateRequest,
     MentalStateResponse,
+    NLPCaptureRequest,
+    NLPCaptureResponse,
+    GoalRequest,
+    GoalResponse,
+    BrainDumpRequest,
+    BrainDumpResponse,
 )
 from services.score_service import calculate_life_score
 from services.alert_service import check_alerts
@@ -23,6 +29,9 @@ from services.prediction_service import predict_outcomes
 from services.scheduler_service import generate_daily_schedule
 from services.proactive_service import get_proactive_insight
 from services.mental_service import analyze_mental_state
+from services.nlp_capture_service import parse_natural_task
+from services.goal_service import decompose_goal
+from services.braindump_service import process_brain_dump
 from ai_handler import generate_response
 from utils.helpers import format_tasks_for_prompt, get_today_str
 from database import tasks_collection
@@ -192,3 +201,44 @@ async def analyze_user_state(request: MentalStateRequest):
     """
     result = await analyze_mental_state(request.text)
     return MentalStateResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 11. NLP QUICK CAPTURE (Phase 1)
+# ─────────────────────────────────────────────
+@router.post("/nlp-capture", response_model=NLPCaptureResponse)
+async def nlp_capture(request: NLPCaptureRequest):
+    """
+    Accept natural language text, extract task details via Gemini,
+    auto-create and save to MongoDB, return the structured task.
+    Example: "Buy groceries tomorrow at 5pm" → structured task
+    """
+    result = await parse_natural_task(request.text)
+    return NLPCaptureResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 12. GOAL DECOMPOSITION (Phase 2)
+# ─────────────────────────────────────────────
+@router.post("/goal", response_model=GoalResponse)
+async def decompose_goal_endpoint(request: GoalRequest):
+    """
+    Accept a big goal, break it into actionable sub-tasks via Gemini,
+    save all tasks to MongoDB with a shared group_id, return the list.
+    Example: "Launch my portfolio website" → 5 sub-tasks
+    """
+    result = await decompose_goal(request.goal)
+    return GoalResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 13. BRAIN DUMP (Phase 8)
+# ─────────────────────────────────────────────
+@router.post("/braindump", response_model=BrainDumpResponse)
+async def brain_dump(request: BrainDumpRequest):
+    """
+    Accept a stream of thoughts, categorize into urgent/later/ignore
+    via Gemini, return organized results.
+    """
+    result = await process_brain_dump(request.text)
+    return BrainDumpResponse(**result)

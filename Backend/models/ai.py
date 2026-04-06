@@ -82,3 +82,92 @@ class MentalStateResponse(BaseModel):
     intensity: str = Field(default="", description="low, medium, or high")
     suggestion: str = ""
     ai_response: str = ""
+
+
+# ─────────────────────────────────────────────
+# NEW: NLP Quick Capture
+# ─────────────────────────────────────────────
+class NLPCaptureRequest(BaseModel):
+    """Input for NLP task capture."""
+    text: str = Field(..., min_length=2, max_length=500, description="Natural language task input")
+
+
+class NLPCaptureTaskDetail(BaseModel):
+    """Task detail returned from NLP capture."""
+    id: str
+    title: str
+    deadline: str
+    status: str
+    priority: str
+    completed: bool
+    hours_spent: float = 0.0
+    created_at: str
+    completed_at: Optional[str] = None
+    source: str = "nlp"
+    group_id: Optional[str] = None
+
+
+class NLPCaptureResponse(BaseModel):
+    """NLP Quick Capture response."""
+    success: bool
+    confidence: str = Field(default="medium", description="Extraction confidence: low, medium, or high")
+    original_text: str = ""
+    error: Optional[str] = None
+    task: Optional[NLPCaptureTaskDetail] = None
+
+
+# ─────────────────────────────────────────────
+# NEW: Goal Decomposition
+# ─────────────────────────────────────────────
+class GoalRequest(BaseModel):
+    """Input for goal decomposition."""
+    goal: str = Field(..., min_length=3, max_length=500, description="Big goal to decompose into tasks")
+
+
+class GoalTaskDetail(BaseModel):
+    """Single task generated from a goal."""
+    id: str
+    title: str
+    deadline: str
+    status: str
+    priority: str
+    completed: bool = False
+    hours_spent: float = 0.0
+    created_at: str
+    completed_at: Optional[str] = None
+    source: str = "goal"
+    group_id: Optional[str] = None
+    order: int = 1
+
+
+class GoalResponse(BaseModel):
+    """Goal decomposition response."""
+    success: bool
+    goal_summary: str = ""
+    group_id: Optional[str] = None
+    error: Optional[str] = None
+    tasks: list[GoalTaskDetail] = []
+
+
+# ─────────────────────────────────────────────
+# NEW: Brain Dump
+# ─────────────────────────────────────────────
+class BrainDumpRequest(BaseModel):
+    """Input for brain dump / mental overload."""
+    text: str = Field(..., min_length=3, max_length=3000, description="Raw stream of thoughts")
+
+
+class BrainDumpItem(BaseModel):
+    """Single categorized thought item."""
+    item: str
+    reason: str = ""
+
+
+class BrainDumpResponse(BaseModel):
+    """Brain dump categorization response."""
+    success: bool
+    summary: str = ""
+    error: Optional[str] = None
+    urgent: list[BrainDumpItem] = []
+    later: list[BrainDumpItem] = []
+    ignore: list[BrainDumpItem] = []

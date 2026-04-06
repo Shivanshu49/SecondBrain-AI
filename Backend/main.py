@@ -68,7 +68,7 @@ async def health_check():
     return {
         "status": "running",
         "service": "SecondBrain AI",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "message": "🧠 SecondBrain AI Backend is online!",
         "endpoints": {
             "tasks": "/api/tasks",
@@ -79,6 +79,9 @@ async def health_check():
             "schedule": "/api/ai/schedule",
             "proactive": "/api/ai/proactive",
             "mental": "/api/ai/mental",
+            "nlp_capture": "/api/ai/nlp-capture",
+            "goal": "/api/ai/goal",
+            "braindump": "/api/ai/braindump",
             "suggestions": "/api/ai/suggestions",
             "auth_signup": "/api/auth/signup",
             "auth_login": "/api/auth/login",

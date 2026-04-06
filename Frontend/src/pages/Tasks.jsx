@@ -4,6 +4,8 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  nlpCapture,
+  decomposeGoal,
 } from '../api/secondbrain.js'
 import FloatingElements from '../components/FloatingElements.jsx'
 import '../styles/tasks.css'
@@ -41,7 +43,7 @@ export default function Tasks() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [filter, setFilter] = useState('all') // all | pending | completed
+  const [filter, setFilter] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState('desc')
   const [showForm, setShowForm] = useState(false)
@@ -50,6 +52,18 @@ export default function Tasks() {
   const [taskDueLocal, setTaskDueLocal] = useState(() => defaultDeadlineLocal())
   const [deletingId, setDeletingId] = useState(null)
   const inputRef = useRef(null)
+
+  // NLP Quick Capture state
+  const [nlpText, setNlpText] = useState('')
+  const [nlpLoading, setNlpLoading] = useState(false)
+  const [nlpResult, setNlpResult] = useState(null)
+  const nlpInputRef = useRef(null)
+
+  // Goal Decomposition state
+  const [goalText, setGoalText] = useState('')
+  const [goalLoading, setGoalLoading] = useState(false)
+  const [goalResult, setGoalResult] = useState(null)
+  const goalInputRef = useRef(null)
 
   const loadTasks = useCallback(async () => {
     setError(null)
@@ -125,8 +139,59 @@ export default function Tasks() {
     []
   )
 
+  // ─── NLP Quick Capture ───
+  const handleNlpCapture = useCallback(async () => {
+    if (!nlpText.trim()) return
+    setNlpLoading(true)
+    setNlpResult(null)
+    setError(null)
+    try {
+      const res = await nlpCapture(nlpText.trim())
+      setNlpResult(res)
+      if (res.success) {
+        setNlpText('')
+        nlpInputRef.current?.focus()
+        await loadTasks()
+      }
+    } catch (e) {
+      setError(e.message || 'NLP capture failed')
+    } finally {
+      setNlpLoading(false)
+    }
+  }, [nlpText, loadTasks])
+
+  // ─── Goal Decomposition ───
+  const handleGoalDecompose = useCallback(async () => {
+    if (!goalText.trim()) return
+    setGoalLoading(true)
+    setGoalResult(null)
+    setError(null)
+    try {
+      const res = await decomposeGoal(goalText.trim())
+      setGoalResult(res)
+      if (res.success) {
+        setGoalText('')
+        goalInputRef.current?.focus()
+        await loadTasks()
+      }
+    } catch (e) {
+      setError(e.message || 'Goal decomposition failed')
+    } finally {
+      setGoalLoading(false)
+    }
+  }, [goalText, loadTasks])
+
   const pendingCount = tasks.filter((t) => !t.completed).length
   const completedCount = tasks.filter((t) => t.completed).length
+
+  // Group tasks by group_id for visual grouping
+  const goalGroups = {}
+  tasks.forEach((t) => {
+    if (t.group_id) {
+      if (!goalGroups[t.group_id]) goalGroups[t.group_id] = []
+      goalGroups[t.group_id].push(t)
+    }
+  })
 
   return (
     <main className="tasks-page">
@@ -155,6 +220,106 @@ export default function Tasks() {
         </div>
       )}
 
+      {/* ─── NLP QUICK CAPTURE ─── */}
+      <div className="nlp-capture-section" id="nlp-capture">
+        <div className="nlp-capture-label">⚡ QUICK CAPTURE</div>
+        <div className="nlp-capture-row">
+          <div className="nlp-input-wrapper">
+            <span className="nlp-input-icon">✨</span>
+            <input
+              ref={nlpInputRef}
+              type="text"
+              className="nlp-input"
+              placeholder="Type anything… e.g. 'Submit report by Friday 5pm'"
+              value={nlpText}
+              onChange={(e) => setNlpText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleNlpCapture()}
+              disabled={nlpLoading}
+            />
+          </div>
+          <button
+            className="nlp-btn"
+            onClick={handleNlpCapture}
+            disabled={nlpLoading || !nlpText.trim()}
+          >
+            {nlpLoading ? '⏳ Parsing…' : '→ CAPTURE'}
+          </button>
+        </div>
+        {nlpResult && nlpResult.success && (
+          <div className="nlp-result nlp-result--success">
+            <span className="nlp-result-icon">✅</span>
+            <div>
+              <strong>Created:</strong> {nlpResult.task?.title}
+              <span className="nlp-result-meta">
+                {' '}— {nlpResult.task?.priority?.toUpperCase()} priority · Due {formatDue(nlpResult.task?.deadline)}
+              </span>
+            </div>
+            <span className="nlp-confidence">Confidence: {nlpResult.confidence?.toUpperCase()}</span>
+          </div>
+        )}
+        {nlpResult && !nlpResult.success && (
+          <div className="nlp-result nlp-result--error">
+            <span className="nlp-result-icon">⚠️</span>
+            {nlpResult.error || 'Could not parse task. Try rephrasing.'}
+          </div>
+        )}
+      </div>
+
+      {/* ─── GOAL DECOMPOSITION ─── */}
+      <div className="goal-section" id="goal-decompose">
+        <div className="goal-label">🎯 GOAL → TASKS</div>
+        <div className="goal-row">
+          <div className="goal-input-wrapper">
+            <span className="goal-input-icon">🚀</span>
+            <input
+              ref={goalInputRef}
+              type="text"
+              className="goal-input"
+              placeholder="Enter a big goal… e.g. 'Launch my portfolio website'"
+              value={goalText}
+              onChange={(e) => setGoalText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleGoalDecompose()}
+              disabled={goalLoading}
+            />
+          </div>
+          <button
+            className="goal-btn"
+            onClick={handleGoalDecompose}
+            disabled={goalLoading || !goalText.trim()}
+          >
+            {goalLoading ? '⏳ Breaking down…' : '→ DECOMPOSE'}
+          </button>
+        </div>
+        {goalResult && goalResult.success && (
+          <div className="goal-result">
+            <div className="goal-result-header">
+              <span className="goal-result-icon">✅</span>
+              <strong>{goalResult.goal_summary}</strong>
+              <span className="goal-result-count">{goalResult.tasks?.length} tasks created</span>
+            </div>
+            <div className="goal-tasks-list">
+              {goalResult.tasks?.map((t, i) => (
+                <div className="goal-task-item" key={t.id}>
+                  <span className="goal-task-order">{i + 1}</span>
+                  <span className="goal-task-title">{t.title}</span>
+                  <span className={`goal-task-priority goal-task-priority--${t.priority}`}>
+                    {t.priority?.toUpperCase()}
+                  </span>
+                  <span className="goal-task-deadline">{formatDue(t.deadline)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {goalResult && !goalResult.success && (
+          <div className="goal-result goal-result--error">
+            <span className="goal-result-icon">⚠️</span>
+            {goalResult.error || 'Could not decompose goal. Try rephrasing.'}
+          </div>
+        )}
+      </div>
+
+      {/* ─── MANUAL TASK FORM ─── */}
       {showForm && (
         <div className="tasks-form">
           <input
@@ -187,6 +352,7 @@ export default function Tasks() {
         </div>
       )}
 
+      {/* ─── FILTERS & SORT ─── */}
       <div className="tasks-controls">
         <div className="tasks-filters">
           {['all', 'pending', 'completed'].map((f) => (
@@ -221,6 +387,7 @@ export default function Tasks() {
 
       {loading && <div className="tasks-loading">Loading tasks…</div>}
 
+      {/* ─── TASK LIST ─── */}
       <div className="tasks-list">
         {!loading && tasks.length === 0 && (
           <div className="tasks-empty">
@@ -230,7 +397,7 @@ export default function Tasks() {
         )}
         {tasks.map((task) => (
           <div
-            className={`tasks-card ${task.completed ? 'tasks-card--done' : ''}`}
+            className={`tasks-card ${task.completed ? 'tasks-card--done' : ''} ${task.source === 'nlp' ? 'tasks-card--nlp' : ''} ${task.source === 'goal' ? 'tasks-card--goal' : ''}`}
             key={task.id}
           >
             <button
@@ -253,6 +420,14 @@ export default function Tasks() {
                 </span>
                 {task.hours_spent > 0 && (
                   <span className="tasks-hours">{task.hours_spent}h spent</span>
+                )}
+                {task.source && task.source !== 'manual' && (
+                  <span className={`tasks-source tasks-source--${task.source}`}>
+                    {task.source === 'nlp' ? '✨ AI' : '🎯 Goal'}
+                  </span>
+                )}
+                {task.group_id && (
+                  <span className="tasks-group">#{task.group_id}</span>
                 )}
               </div>
             </div>

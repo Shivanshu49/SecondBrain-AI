@@ -60,3 +60,18 @@ export function prioritizeTasks() {
 export function getSuggestions() {
   return apiFetch('/api/ai/suggestions')
 }
+
+// ─── NEW: NLP Quick Capture ───
+export function nlpCapture(text) {
+  return apiFetch('/api/ai/nlp-capture', { method: 'POST', body: JSON.stringify({ text }) })
+}
+
+// ─── NEW: Goal Decomposition ───
+export function decomposeGoal(goal) {
+  return apiFetch('/api/ai/goal', { method: 'POST', body: JSON.stringify({ goal }) })
+}
+
+// ─── NEW: Brain Dump ───
+export function brainDump(text) {
+  return apiFetch('/api/ai/braindump', { method: 'POST', body: JSON.stringify({ text }) })
+}

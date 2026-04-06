@@ -1,6 +1,6 @@
 """
 models/task.py — Task Pydantic Schemas
-Enhanced with priority, hours_spent, completed flag, and timestamps.
+Enhanced with priority, hours_spent, completed flag, timestamps, source, and group_id.
 """
 
 from pydantic import BaseModel, Field
@@ -20,6 +20,8 @@ class TaskCreate(BaseModel):
     deadline: str = Field(..., description="Deadline as ISO datetime string (e.g. 2026-04-10T18:00:00)")
     priority: Priority = Field(default=Priority.MEDIUM, description="Task priority: low, medium, or high")
     hours_spent: Optional[float] = Field(default=0.0, ge=0, description="Hours already spent on task")
+    source: Optional[str] = Field(default="manual", description="How the task was created: manual, nlp, or goal")
+    group_id: Optional[str] = Field(default=None, description="Group ID for goal-generated tasks")
 
 
 class TaskUpdate(BaseModel):
@@ -42,3 +44,5 @@ class TaskResponse(BaseModel):
     hours_spent: float = Field(default=0.0)
     created_at: str = Field(..., description="ISO timestamp when task was created")
     completed_at: Optional[str] = Field(None, description="ISO timestamp when task was completed")
+    source: str = Field(default="manual", description="How the task was created: manual, nlp, or goal")
+    group_id: Optional[str] = Field(default=None, description="Group ID for goal-generated tasks")
