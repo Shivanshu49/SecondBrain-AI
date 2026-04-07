@@ -9,7 +9,7 @@ from database import tasks_collection
 from utils.helpers import get_today_str
 
 
-async def parse_natural_task(text: str) -> dict:
+async def parse_natural_task(text: str, user_id: str = None) -> dict:
     """
     Send raw user text to Gemini, extract task details,
     save to MongoDB, and return the created task.
@@ -75,6 +75,7 @@ Rules:
         "completed_at": None,
         "source": "nlp",
         "group_id": None,
+        "user_id": user_id,
     }
 
     inserted = tasks_collection.insert_one(task_data)

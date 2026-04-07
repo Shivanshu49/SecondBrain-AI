@@ -13,13 +13,19 @@ from utils.helpers import (
 )
 
 
-async def get_recommended_task() -> dict:
+async def get_recommended_task(user_id: str = None) -> dict:
     """
     Analyze pending tasks from both collections, sort by urgency + priority,
     pick top candidates, and ask Gemini to select the best one.
     """
-    pending = list(tasks_collection.find({"status": "pending"}))
-    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+    query = {"status": "pending"}
+    if user_id:
+        query["user_id"] = user_id
+    pending = list(tasks_collection.find(query))
+    entry_query = {"type": "task", "status": "pending"}
+    if user_id:
+        entry_query["user_id"] = user_id
+    task_entries = list(entries_collection.find(entry_query))
     pending.extend(task_entries)
 
     if not pending:

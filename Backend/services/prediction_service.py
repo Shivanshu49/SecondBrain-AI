@@ -9,23 +9,30 @@ from utils.helpers import format_tasks_for_prompt, hours_until_deadline, get_tod
 from services.score_service import calculate_life_score
 
 
-async def predict_outcomes() -> dict:
+async def predict_outcomes(user_id: str = None) -> dict:
     """
     Collect task data from both collections and behavioral patterns, then ask Gemini
     to predict success/failure and provide suggestions.
     """
-    pending = list(tasks_collection.find({"status": "pending"}))
-    completed = list(tasks_collection.find({"status": "completed"}))
+    query = {"status": "pending"}
+    if user_id:
+        query["user_id"] = user_id
+    pending = list(tasks_collection.find(query))
+    c_query = {"status": "completed"}
+    if user_id:
+        c_query["user_id"] = user_id
+    completed = list(tasks_collection.find(c_query))
 
-    task_entries_pending = list(
-        entries_collection.find({"type": "task", "status": "pending"})
-    )
-    task_entries_completed = list(
-        entries_collection.find({"type": "task", "status": "completed"})
-    )
+    e_pend = {"type": "task", "status": "pending"}
+    e_comp = {"type": "task", "status": "completed"}
+    if user_id:
+        e_pend["user_id"] = user_id
+        e_comp["user_id"] = user_id
+    task_entries_pending = list(entries_collection.find(e_pend))
+    task_entries_completed = list(entries_collection.find(e_comp))
     pending.extend(task_entries_pending)
     completed.extend(task_entries_completed)
-    score_data = calculate_life_score()
+    score_data = calculate_life_score(user_id)
 
     if len(pending) == 0 and len(completed) == 0:
         return {

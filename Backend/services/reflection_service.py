@@ -9,7 +9,7 @@ from ai_handler import generate_json_response
 from utils.helpers import get_today_str
 
 
-async def generate_reflection() -> dict:
+async def generate_reflection(user_id: str = None) -> dict:
     """
     Collect completed tasks, past entries, and behavioral data.
     Ask Gemini: "What has the user improved? What patterns exist?"
@@ -20,8 +20,9 @@ async def generate_reflection() -> dict:
     month_ago = now - timedelta(days=30)
     week_ago = now - timedelta(days=7)
 
-    all_tasks = list(tasks_collection.find())
-    all_entries = list(entries_collection.find())
+    query = {"user_id": user_id} if user_id else {}
+    all_tasks = list(tasks_collection.find(query))
+    all_entries = list(entries_collection.find(query))
 
     completed_tasks = [t for t in all_tasks if t.get("status") == "completed"]
     pending_tasks = [t for t in all_tasks if t.get("status") == "pending"]

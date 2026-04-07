@@ -8,13 +8,19 @@ from ai_handler import generate_json_response, generate_response
 from utils.helpers import format_tasks_for_prompt, get_today_str
 
 
-async def generate_daily_schedule(available_hours: int = 8) -> dict:
+async def generate_daily_schedule(available_hours: int = 8, user_id: str = None) -> dict:
     """
     Take pending tasks from both collections and available hours, ask Gemini
     to create a structured daily schedule with time slots.
     """
-    pending = list(tasks_collection.find({"status": "pending"}))
-    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+    query = {"status": "pending"}
+    if user_id:
+        query["user_id"] = user_id
+    pending = list(tasks_collection.find(query))
+    e_query = {"type": "task", "status": "pending"}
+    if user_id:
+        e_query["user_id"] = user_id
+    task_entries = list(entries_collection.find(e_query))
     pending.extend(task_entries)
 
     if not pending:

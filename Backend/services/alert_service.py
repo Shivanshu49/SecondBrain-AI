@@ -8,13 +8,15 @@ from database import tasks_collection, entries_collection
 from utils.helpers import parse_deadline, hours_until_deadline
 
 
-def check_alerts() -> dict:
+def check_alerts(user_id: str = None) -> dict:
     """
     Analyze user's tasks and generate failure alerts.
     Now includes both tasks and entry-type tasks.
     """
-    all_tasks = list(tasks_collection.find())
-    task_entries = list(entries_collection.find({"type": "task"}))
+    query = {"user_id": user_id} if user_id else {}
+    all_tasks = list(tasks_collection.find(query))
+    entry_query = {"type": "task", **(query)}
+    task_entries = list(entries_collection.find(entry_query))
     all_tasks.extend(task_entries)
 
     pending = [t for t in all_tasks if t.get("status") == "pending"]

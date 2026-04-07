@@ -1,9 +1,10 @@
 """
 routes/ai_routes.py — AI-Powered Smart Endpoints
 Unified API layer for all AI intelligence features.
+All endpoints extract user_id from JWT and pass to services for per-user isolation.
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from typing import Optional
 
 from models.ai import (
@@ -46,6 +47,7 @@ from services.connection_service import find_related_entries, update_related_ids
 from ai_handler import generate_response
 from utils.helpers import format_tasks_for_prompt, get_today_str
 from database import tasks_collection, entries_collection
+from auth import get_user_id
 
 router = APIRouter(prefix="/api/ai", tags=["AI Intelligence"])
 
@@ -54,12 +56,10 @@ router = APIRouter(prefix="/api/ai", tags=["AI Intelligence"])
 # 1. LIFE SCORE
 # ─────────────────────────────────────────────
 @router.get("/score", response_model=ScoreResponse)
-async def get_life_score():
-    """
-    Calculate and return the user's productivity score,
-    stats, streak, and consistency metrics.
-    """
-    data = calculate_life_score()
+async def get_life_score(request: Request):
+    """Calculate and return the user's productivity score."""
+    user_id = get_user_id(request)
+    data = calculate_life_score(user_id)
     return ScoreResponse(**data)
 
 
@@ -67,14 +67,11 @@ async def get_life_score():
 # 2. FAILURE ALERTS
 # ─────────────────────────────────────────────
 @router.get("/alerts", response_model=AlertResponse)
-async def get_alerts():
-    """
-    Check for failure conditions (low completion, overdue tasks,
-    approaching deadlines) and return severity-based alerts.
-    """
-    alert_data = check_alerts()
+async def get_alerts(request: Request):
+    """Check for failure conditions and return severity-based alerts."""
+    user_id = get_user_id(request)
+    alert_data = check_alerts(user_id)
 
-    # Generate AI summary if there are alerts
     ai_summary = ""
     if alert_data["has_alerts"]:
         context = alert_data["context"]
@@ -95,12 +92,10 @@ Write a brief, direct summary (2-3 sentences) of the situation and what they sho
 # 3. AUTONOMOUS DECISION ENGINE
 # ─────────────────────────────────────────────
 @router.get("/decide", response_model=DecisionResponse)
-async def get_decision():
-    """
-    Analyze pending tasks and use AI to recommend
-    the single best task to work on right now.
-    """
-    result = await get_recommended_task()
+async def get_decision(request: Request):
+    """Analyze pending tasks and recommend the best task to work on."""
+    user_id = get_user_id(request)
+    result = await get_recommended_task(user_id)
     return DecisionResponse(**result)
 
 
@@ -108,12 +103,10 @@ async def get_decision():
 # 4. LIFE PREDICTION ENGINE
 # ─────────────────────────────────────────────
 @router.get("/predict", response_model=PredictionResponse)
-async def get_prediction():
-    """
-    Collect task data and behavioral patterns,
-    predict success/failure, and provide suggestions.
-    """
-    result = await predict_outcomes()
+async def get_prediction(request: Request):
+    """Predict success/failure and provide suggestions."""
+    user_id = get_user_id(request)
+    result = await predict_outcomes(user_id)
     return PredictionResponse(**result)
 
 
@@ -122,14 +115,14 @@ async def get_prediction():
 # ─────────────────────────────────────────────
 @router.get("/schedule", response_model=ScheduleResponse)
 async def get_schedule(
+    request: Request,
     hours: Optional[int] = Query(
         default=8, ge=1, le=16, description="Available working hours"
     ),
 ):
-    """
-    Generate a time-blocked daily schedule using AI.
-    """
-    result = await generate_daily_schedule(available_hours=hours)
+    """Generate a time-blocked daily schedule using AI."""
+    user_id = get_user_id(request)
+    result = await generate_daily_schedule(available_hours=hours, user_id=user_id)
     return ScheduleResponse(**result)
 
 
@@ -137,12 +130,10 @@ async def get_schedule(
 # 6. PROACTIVE AI (DASHBOARD)
 # ─────────────────────────────────────────────
 @router.get("/proactive")
-async def get_proactive():
-    """
-    Generate a proactive AI suggestion based on
-    the user's current situation (triggered on dashboard load).
-    """
-    result = await get_proactive_insight()
+async def get_proactive(request: Request):
+    """Generate a proactive AI suggestion based on user's current situation."""
+    user_id = get_user_id(request)
+    result = await get_proactive_insight(user_id)
     return result
 
 
@@ -150,26 +141,22 @@ async def get_proactive():
 # 7. MENTAL STATE DETECTION
 # ─────────────────────────────────────────────
 @router.post("/mental", response_model=MentalStateResponse)
-async def detect_mental_state(request: MentalStateRequest):
-    """
-    Analyze user's text input to detect emotional state
-    and provide supportive, personalized advice.
-    """
-    result = await analyze_mental_state(request.text)
+async def detect_mental_state(req: MentalStateRequest):
+    """Analyze user's text input to detect emotional state."""
+    result = await analyze_mental_state(req.text)
     return MentalStateResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 8. SMART SUGGESTIONS (kept from v1)
+# 8. SMART SUGGESTIONS
 # ─────────────────────────────────────────────
 @router.get("/suggestions", response_model=AIResponse)
-async def get_suggestions():
-    """
-    Fetch all pending tasks, ask AI to prioritize them,
-    and suggest what the user should focus on today.
-    """
-    tasks = list(tasks_collection.find({"status": "pending"}))
-    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+async def get_suggestions(request: Request):
+    """Fetch pending tasks and suggest what to focus on today."""
+    user_id = get_user_id(request)
+    query = {"status": "pending", "user_id": user_id}
+    tasks = list(tasks_collection.find(query))
+    task_entries = list(entries_collection.find({"type": "task", "status": "pending", "user_id": user_id}))
     tasks.extend(task_entries)
     task_text = format_tasks_for_prompt(tasks)
     today = get_today_str()
@@ -197,126 +184,101 @@ Format your response with clear numbering and short explanations."""
 # 9. PRIORITIZE (alias for suggestions)
 # ─────────────────────────────────────────────
 @router.get("/prioritize", response_model=AIResponse)
-async def prioritize_tasks():
-    """
-    Alias for /suggestions — prioritize pending tasks using AI.
-    Kept as a separate route so the frontend can call /prioritize directly.
-    """
-    return await get_suggestions()
+async def prioritize_tasks(request: Request):
+    """Alias for /suggestions."""
+    return await get_suggestions(request)
 
 
 # ─────────────────────────────────────────────
 # 10. ANALYZE (alias for mental)
 # ─────────────────────────────────────────────
 @router.post("/analyze", response_model=MentalStateResponse)
-async def analyze_user_state(request: MentalStateRequest):
-    """
-    Alias for /mental — analyze user text for emotional state.
-    Kept as a separate route so the frontend can call /analyze directly.
-    """
-    result = await analyze_mental_state(request.text)
+async def analyze_user_state(req: MentalStateRequest):
+    """Alias for /mental."""
+    result = await analyze_mental_state(req.text)
     return MentalStateResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 11. NLP QUICK CAPTURE (Phase 1)
+# 11. NLP QUICK CAPTURE
 # ─────────────────────────────────────────────
 @router.post("/nlp-capture", response_model=NLPCaptureResponse)
-async def nlp_capture(request: NLPCaptureRequest):
-    """
-    Accept natural language text, extract task details via Gemini,
-    auto-create and save to MongoDB, return the structured task.
-    Example: "Buy groceries tomorrow at 5pm" → structured task
-    """
-    result = await parse_natural_task(request.text)
+async def nlp_capture(req: NLPCaptureRequest, request: Request):
+    """Parse natural language text into a structured task."""
+    user_id = get_user_id(request)
+    result = await parse_natural_task(req.text, user_id)
     return NLPCaptureResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 12. GOAL DECOMPOSITION (Phase 2)
+# 12. GOAL DECOMPOSITION
 # ─────────────────────────────────────────────
 @router.post("/goal", response_model=GoalResponse)
-async def decompose_goal_endpoint(request: GoalRequest):
-    """
-    Accept a big goal, break it into actionable sub-tasks via Gemini,
-    save all tasks to MongoDB with a shared group_id, return the list.
-    Example: "Launch my portfolio website" → 5 sub-tasks
-    """
-    result = await decompose_goal(request.goal)
+async def decompose_goal_endpoint(req: GoalRequest, request: Request):
+    """Break a big goal into actionable sub-tasks."""
+    user_id = get_user_id(request)
+    result = await decompose_goal(req.goal, user_id)
     return GoalResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 13. BRAIN DUMP (Phase 8)
+# 13. BRAIN DUMP
 # ─────────────────────────────────────────────
 @router.post("/braindump", response_model=BrainDumpResponse)
-async def brain_dump(request: BrainDumpRequest):
-    """
-    Accept a stream of thoughts, categorize into urgent/later/ignore
-    via Gemini, return organized results.
-    """
-    result = await process_brain_dump(request.text)
+async def brain_dump(req: BrainDumpRequest):
+    """Categorize thoughts into urgent/later/ignore."""
+    result = await process_brain_dump(req.text)
     return BrainDumpResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 14. UNIVERSAL CAPTURE (Steps 2+3)
+# 14. UNIVERSAL CAPTURE
 # ─────────────────────────────────────────────
 @router.post("/capture", response_model=CaptureResponse)
-async def universal_capture(request: CaptureRequest):
-    """
-    Accept any raw text, AI classifies it as task/idea/note/goal,
-    extracts structured data, saves to entries collection.
-    Example: "Exam in 3 days" → auto-creates task with deadline
-    """
-    result = await classify_and_capture(request.text)
+async def universal_capture(req: CaptureRequest, request: Request):
+    """Classify text as task/idea/note/goal and save."""
+    user_id = get_user_id(request)
+    result = await classify_and_capture(req.text, user_id)
     return CaptureResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 15. DAILY INSIGHTS (Step 4)
+# 15. DAILY INSIGHTS
 # ─────────────────────────────────────────────
 @router.get("/insights", response_model=InsightResponse)
-async def get_insights():
-    """
-    Generate 2-3 daily AI insights from recent entries,
-    pending tasks, deadlines, and behavioral patterns.
-    """
-    result = await generate_daily_insights()
+async def get_insights(request: Request):
+    """Generate daily AI insights from recent data."""
+    user_id = get_user_id(request)
+    result = await generate_daily_insights(user_id)
     return InsightResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 16. BRAIN REFLECTION (Step 9)
+# 16. BRAIN REFLECTION
 # ─────────────────────────────────────────────
 @router.get("/reflection", response_model=ReflectionResponse)
-async def get_reflection():
-    """
-    Analyze completed tasks and past entries to show
-    user growth, achievements, patterns, and suggestions.
-    """
-    result = await generate_reflection()
+async def get_reflection(request: Request):
+    """Analyze past data to show growth and patterns."""
+    user_id = get_user_id(request)
+    result = await generate_reflection(user_id)
     return ReflectionResponse(**result)
 
 
 # ─────────────────────────────────────────────
-# 17. ENTRY CONNECTIONS (Step 6)
+# 17. ENTRY CONNECTIONS
 # ─────────────────────────────────────────────
 @router.get("/entries/{entry_id}/related", response_model=list[RelatedEntry])
-async def get_related_entries(entry_id: str):
-    """
-    Find entries related to a given entry by keyword similarity.
-    Returns related items with relevance scores.
-    """
-    result = find_related_entries(entry_id, limit=5)
+async def get_related_entries(entry_id: str, request: Request):
+    """Find entries related to a given entry."""
+    user_id = get_user_id(request)
+    result = find_related_entries(entry_id, limit=5, user_id=user_id)
     return [RelatedEntry(**r) for r in result]
 
 
 @router.post("/entries/{entry_id}/connect")
-async def connect_entry(entry_id: str):
-    """
-    Update an entry's related_ids field with found connections.
-    """
+async def connect_entry(entry_id: str, request: Request):
+    """Update an entry's related_ids with found connections."""
+    user_id = get_user_id(request)
     related_ids = update_related_ids(entry_id)
     return {
         "success": True,

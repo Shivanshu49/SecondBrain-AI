@@ -9,7 +9,7 @@ from database import entries_collection
 from utils.helpers import get_today_str
 
 
-async def classify_and_capture(text: str) -> dict:
+async def classify_and_capture(text: str, user_id: str = None) -> dict:
     """
     Send raw user text to Gemini, classify type, extract structured fields,
     save to MongoDB entries collection, and return the created entry.
@@ -94,6 +94,7 @@ Extraction Rules:
         "source": "capture",
         "group_id": None,
         "related_ids": [],
+        "user_id": user_id,
     }
 
     inserted = entries_collection.insert_one(entry_data)

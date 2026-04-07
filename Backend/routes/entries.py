@@ -1,9 +1,10 @@
 """
 routes/entries.py — Entry CRUD API Endpoints
 Handles the new universal entry system (task/idea/note/goal).
+All entries are scoped to the authenticated user.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from bson import ObjectId
 from pymongo import ReturnDocument
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from typing import Optional
 from database import entries_collection
 from models.entry import EntryCreate, EntryUpdate, EntryResponse
 from utils.helpers import priority_to_int
+from auth import get_user_id
 
 router = APIRouter(prefix="/api/entries", tags=["Entries"])
 
@@ -37,8 +39,10 @@ def entry_to_response(entry: dict) -> dict:
 
 
 @router.post("", response_model=EntryResponse, status_code=201)
-async def create_entry(entry: EntryCreate):
+async def create_entry(entry: EntryCreate, request: Request):
     """Create a new entry (task/idea/note/goal)."""
+    user_id = get_user_id(request)
+
     entry_data = {
         "content": entry.content,
         "type": entry.type.value,
@@ -52,6 +56,7 @@ async def create_entry(entry: EntryCreate):
         "source": entry.source or "manual",
         "group_id": entry.group_id,
         "related_ids": [],
+        "user_id": user_id,
     }
 
     result = entries_collection.insert_one(entry_data)
@@ -62,6 +67,7 @@ async def create_entry(entry: EntryCreate):
 
 @router.get("", response_model=list[EntryResponse])
 async def get_all_entries(
+    request: Request,
     type: Optional[str] = Query(
         None, description="Filter by type: task, idea, note, goal"
     ),
@@ -70,7 +76,9 @@ async def get_all_entries(
     order: Optional[str] = Query("desc", description="Sort order"),
 ):
     """Fetch entries with optional filtering and sorting."""
-    query = {}
+    user_id = get_user_id(request)
+
+    query = {"user_id": user_id}
     if type:
         query["type"] = type
     if status:
@@ -93,12 +101,14 @@ async def get_all_entries(
 
 
 @router.get("/{entry_id}", response_model=EntryResponse)
-async def get_entry(entry_id: str):
+async def get_entry(entry_id: str, request: Request):
     """Get a single entry by ID."""
+    user_id = get_user_id(request)
+
     if not ObjectId.is_valid(entry_id):
         raise HTTPException(status_code=400, detail="Invalid entry ID format.")
 
-    entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    entry = entries_collection.find_one({"_id": ObjectId(entry_id), "user_id": user_id})
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found.")
 
@@ -106,8 +116,10 @@ async def get_entry(entry_id: str):
 
 
 @router.patch("/{entry_id}", response_model=EntryResponse)
-async def update_entry(entry_id: str, entry_update: EntryUpdate):
+async def update_entry(entry_id: str, entry_update: EntryUpdate, request: Request):
     """Update an existing entry by ID."""
+    user_id = get_user_id(request)
+
     if not ObjectId.is_valid(entry_id):
         raise HTTPException(status_code=400, detail="Invalid entry ID format.")
 
@@ -128,7 +140,7 @@ async def update_entry(entry_id: str, entry_update: EntryUpdate):
         update_data["completed_at"] = None
 
     result = entries_collection.find_one_and_update(
-        {"_id": ObjectId(entry_id)},
+        {"_id": ObjectId(entry_id), "user_id": user_id},
         {"$set": update_data},
         return_document=ReturnDocument.AFTER,
     )
@@ -140,12 +152,14 @@ async def update_entry(entry_id: str, entry_update: EntryUpdate):
 
 
 @router.delete("/{entry_id}")
-async def delete_entry(entry_id: str):
+async def delete_entry(entry_id: str, request: Request):
     """Delete an entry by ID."""
+    user_id = get_user_id(request)
+
     if not ObjectId.is_valid(entry_id):
         raise HTTPException(status_code=400, detail="Invalid entry ID format.")
 
-    result = entries_collection.delete_one({"_id": ObjectId(entry_id)})
+    result = entries_collection.delete_one({"_id": ObjectId(entry_id), "user_id": user_id})
 
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Entry not found.")

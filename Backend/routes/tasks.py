@@ -2,9 +2,10 @@
 routes/tasks.py — Task CRUD API Endpoints
 Handles creating, reading, updating, and deleting tasks.
 Supports filtering by status, sorting by deadline/priority.
+All tasks are scoped to the authenticated user.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from bson import ObjectId
 from pymongo import ReturnDocument
 from datetime import datetime, timezone
@@ -13,6 +14,7 @@ from typing import Optional
 from database import tasks_collection
 from models.task import TaskCreate, TaskUpdate, TaskResponse
 from utils.helpers import priority_to_int
+from auth import get_user_id
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
 
@@ -39,8 +41,10 @@ def task_to_response(task: dict) -> dict:
 # CREATE
 # ─────────────────────────────────────────────
 @router.post("", response_model=TaskResponse, status_code=201)
-async def create_task(task: TaskCreate):
+async def create_task(task: TaskCreate, request: Request):
     """Create a new task and store it in the database."""
+    user_id = get_user_id(request)
+
     task_data = {
         "title": task.title,
         "deadline": task.deadline,
@@ -52,6 +56,7 @@ async def create_task(task: TaskCreate):
         "source": task.source or "manual",
         "group_id": task.group_id,
         "type": task.type or "task",
+        "user_id": user_id,
     }
 
     result = tasks_collection.insert_one(task_data)
@@ -65,6 +70,7 @@ async def create_task(task: TaskCreate):
 # ─────────────────────────────────────────────
 @router.get("", response_model=list[TaskResponse])
 async def get_all_tasks(
+    request: Request,
     status: Optional[str] = Query(
         None, pattern="^(pending|completed)$", description="Filter by status"
     ),
@@ -76,8 +82,10 @@ async def get_all_tasks(
     ),
 ):
     """Fetch tasks with optional filtering and sorting."""
-    # Build query filter
-    query = {}
+    user_id = get_user_id(request)
+
+    # Build query filter — scoped to user
+    query = {"user_id": user_id}
     if status:
         query["status"] = status
 
@@ -107,8 +115,10 @@ async def get_all_tasks(
 # UPDATE
 # ─────────────────────────────────────────────
 @router.patch("/{task_id}", response_model=TaskResponse)
-async def update_task(task_id: str, task_update: TaskUpdate):
+async def update_task(task_id: str, task_update: TaskUpdate, request: Request):
     """Update an existing task by ID."""
+    user_id = get_user_id(request)
+
     if not ObjectId.is_valid(task_id):
         raise HTTPException(status_code=400, detail="Invalid task ID format.")
 
@@ -131,7 +141,7 @@ async def update_task(task_id: str, task_update: TaskUpdate):
         update_data["completed_at"] = None
 
     result = tasks_collection.find_one_and_update(
-        {"_id": ObjectId(task_id)},
+        {"_id": ObjectId(task_id), "user_id": user_id},
         {"$set": update_data},
         return_document=ReturnDocument.AFTER,
     )
@@ -146,12 +156,14 @@ async def update_task(task_id: str, task_update: TaskUpdate):
 # DELETE
 # ─────────────────────────────────────────────
 @router.delete("/{task_id}")
-async def delete_task(task_id: str):
+async def delete_task(task_id: str, request: Request):
     """Delete a task by ID."""
+    user_id = get_user_id(request)
+
     if not ObjectId.is_valid(task_id):
         raise HTTPException(status_code=400, detail="Invalid task ID format.")
 
-    result = tasks_collection.delete_one({"_id": ObjectId(task_id)})
+    result = tasks_collection.delete_one({"_id": ObjectId(task_id), "user_id": user_id})
 
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Task not found.")

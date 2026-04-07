@@ -9,7 +9,7 @@ from ai_handler import generate_json_response
 from utils.helpers import get_today_str, hours_until_deadline
 
 
-async def generate_daily_insights() -> dict:
+async def generate_daily_insights(user_id: str = None) -> dict:
     """
     Collect recent entries, pending tasks, overdue items, and deadlines.
     Send to Gemini for 2-3 insights + mood assessment.
@@ -18,8 +18,9 @@ async def generate_daily_insights() -> dict:
     now = datetime.now(timezone.utc)
     week_ago = now - timedelta(days=7)
 
-    all_entries = list(entries_collection.find())
-    all_tasks = list(tasks_collection.find())
+    query = {"user_id": user_id} if user_id else {}
+    all_entries = list(entries_collection.find(query))
+    all_tasks = list(tasks_collection.find(query))
 
     pending_tasks = [t for t in all_tasks if t.get("status") == "pending"]
     completed_tasks = [t for t in all_tasks if t.get("status") == "completed"]

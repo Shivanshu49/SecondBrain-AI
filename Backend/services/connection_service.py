@@ -7,7 +7,7 @@ import re
 from database import entries_collection
 
 
-def find_related_entries(entry_id: str, limit: int = 5) -> list[dict]:
+def find_related_entries(entry_id: str, limit: int = 5, user_id: str = None) -> list[dict]:
     """
     Find entries related to a given entry by keyword matching.
     Returns list of related entries with relevance score.
@@ -22,9 +22,10 @@ def find_related_entries(entry_id: str, limit: int = 5) -> list[dict]:
     if not keywords:
         return []
 
-    all_entries = list(
-        entries_collection.find({"_id": {"$ne": _to_object_id(entry_id)}})
-    )
+    query = {"_id": {"$ne": _to_object_id(entry_id)}}
+    if user_id:
+        query["user_id"] = user_id
+    all_entries = list(entries_collection.find(query))
 
     scored = []
     for other in all_entries:

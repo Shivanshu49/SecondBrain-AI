@@ -52,3 +52,10 @@ def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Not authenticated")
     token = auth_header[7:]
     return decode_token(token)
+
+
+def get_user_id(request: Request) -> str:
+    """Extract user_id from the Authorization header. Raises 401 if not authenticated."""
+    payload = get_current_user(request)
+    return payload["sub"]
+

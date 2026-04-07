@@ -8,13 +8,15 @@ from database import tasks_collection, entries_collection
 from utils.helpers import parse_deadline
 
 
-def calculate_life_score() -> dict:
+def calculate_life_score(user_id: str = None) -> dict:
     """
     Calculate the user's overall life/productivity score.
     Now includes both tasks and entry-type tasks.
     """
-    all_tasks = list(tasks_collection.find())
-    task_entries = list(entries_collection.find({"type": "task"}))
+    query = {"user_id": user_id} if user_id else {}
+    all_tasks = list(tasks_collection.find(query))
+    entry_query = {"type": "task", **(query)}
+    task_entries = list(entries_collection.find(entry_query))
 
     all_tasks.extend(task_entries)
     total = len(all_tasks)

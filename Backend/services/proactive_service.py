@@ -9,14 +9,20 @@ from utils.helpers import hours_until_deadline, get_today_str
 from services.score_service import calculate_life_score
 
 
-async def get_proactive_insight() -> dict:
+async def get_proactive_insight(user_id: str = None) -> dict:
     """
     Check the user's situation from both collections (missed tasks, low score, near deadlines)
     and generate a proactive suggestion via Gemini.
     """
-    score_data = calculate_life_score()
-    pending = list(tasks_collection.find({"status": "pending"}))
-    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+    score_data = calculate_life_score(user_id)
+    query = {"status": "pending"}
+    if user_id:
+        query["user_id"] = user_id
+    pending = list(tasks_collection.find(query))
+    e_query = {"type": "task", "status": "pending"}
+    if user_id:
+        e_query["user_id"] = user_id
+    task_entries = list(entries_collection.find(e_query))
     pending.extend(task_entries)
 
     # Identify trigger conditions

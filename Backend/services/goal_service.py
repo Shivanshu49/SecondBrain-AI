@@ -10,7 +10,7 @@ from database import tasks_collection
 from utils.helpers import get_today_str
 
 
-async def decompose_goal(goal: str) -> dict:
+async def decompose_goal(goal: str, user_id: str = None) -> dict:
     """
     Send a goal to Gemini, receive a list of sub-tasks,
     save them all to MongoDB with a shared group_id,
@@ -101,6 +101,7 @@ Rules:
             "completed_at": None,
             "source": "goal",
             "group_id": group_id,
+            "user_id": user_id,
         }
 
         inserted = tasks_collection.insert_one(task_data)
