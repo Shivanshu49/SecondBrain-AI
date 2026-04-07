@@ -557,6 +557,12 @@ body, #navbar, .nav-logo, .nav-link, .btn,
   border-color: var(--neon);
 }
 
+[data-theme="dark"] .navbar--dashboard .nav-link--active {
+  background: var(--neon);
+  color: #0a0a0a;
+  border-color: var(--neon);
+}
+
 [data-theme="dark"] .nav-link--login {
   background: var(--neon);
   color: #0a0a0a;
