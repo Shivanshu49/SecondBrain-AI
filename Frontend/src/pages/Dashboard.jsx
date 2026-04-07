@@ -11,6 +11,8 @@ import {
   getSchedule,
   getProactive,
   nlpCapture,
+  getInsights,
+  universalCapture,
 } from '../api/secondbrain.js'
 import '../styles/dashboard.css'
 
@@ -81,6 +83,11 @@ export default function Dashboard() {
   const [nlpLoading, setNlpLoading] = useState(false)
   const [nlpSuccess, setNlpSuccess] = useState(null)
   const [confidencePct, setConfidencePct] = useState(72)
+  const [insights, setInsights] = useState([])
+  const [insightMood, setInsightMood] = useState('neutral')
+  const [captureText, setCaptureText] = useState('')
+  const [captureLoading, setCaptureLoading] = useState(false)
+  const [captureResult, setCaptureResult] = useState(null)
 
   const taskInputRef = useRef(null)
   const scoreAnimRef = useRef(null)
@@ -89,7 +96,7 @@ export default function Dashboard() {
     setError(null)
     setLoading(true)
     try {
-      const [taskList, score, alerts, decision, prediction, schedule, proactive] = await Promise.all([
+      const [taskList, score, alerts, decision, prediction, schedule, proactive, insightsData] = await Promise.all([
         getTasks({ sort_by: 'deadline', order: 'asc' }).catch(() => []),
         getScore().catch(() => null),
         getAlerts().catch(() => null),
@@ -97,6 +104,7 @@ export default function Dashboard() {
         getPrediction().catch(() => null),
         getSchedule(8).catch(() => null),
         getProactive().catch(() => null),
+        getInsights().catch(() => null),
       ])
 
       setTasks((taskList || []).map(mapTaskFromApi))
@@ -164,6 +172,14 @@ export default function Dashboard() {
         setProactiveMsg(proactive.message)
       } else {
         setProactiveMsg('')
+      }
+
+      if (insightsData?.success && insightsData.insights?.length) {
+        setInsights(insightsData.insights)
+        setInsightMood(insightsData.mood || 'neutral')
+      } else {
+        setInsights([])
+        setInsightMood('neutral')
       }
     } catch (e) {
       setError(e.message || 'Failed to load dashboard')
@@ -325,6 +341,28 @@ export default function Dashboard() {
     }
   }, [nlpText, refreshScoresOnly])
 
+  const handleUniversalCapture = useCallback(async () => {
+    if (!captureText.trim()) return
+    setCaptureLoading(true)
+    setCaptureResult(null)
+    try {
+      const res = await universalCapture(captureText.trim())
+      setCaptureResult(res)
+      if (res.success) {
+        setCaptureText('')
+        if (res.entry_type === 'task' && res.entry) {
+          setTasks((prev) => [...prev, mapTaskFromApi(res.entry)])
+          await refreshScoresOnly()
+        }
+        setTimeout(() => setCaptureResult(null), 5000)
+      }
+    } catch (e) {
+      setError(e.message || 'Capture failed')
+    } finally {
+      setCaptureLoading(false)
+    }
+  }, [captureText, refreshScoresOnly])
+
   return (
     <main className="dashboard-page">
       {error && (
@@ -481,6 +519,54 @@ export default function Dashboard() {
             <p className="alert-text">{alertPrimary}</p>
           </div>
           {alertSub && <div className="alert-sub">{alertSub}</div>}
+        </div>
+
+        {insights.length > 0 && (
+          <div className="card card-insights" id="card-insights">
+            <div className="card-label">💡 DAILY INSIGHTS <span className="insight-mood">Mood: {insightMood}</span></div>
+            <div className="insights-list">
+              {insights.map((insight, i) => (
+                <div className="insight-item" key={i}>
+                  <span className="insight-number">{i + 1}</span>
+                  <span className="insight-text">{insight}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="card card-capture" id="card-capture">
+          <div className="card-label">🧠 UNIVERSAL CAPTURE</div>
+          <p className="capture-dash-desc">Type anything — AI classifies as task, idea, note, or goal</p>
+          <div className="capture-dash-row">
+            <div className="capture-dash-input-wrap">
+              <span className="capture-dash-icon">✨</span>
+              <input
+                type="text"
+                className="capture-dash-input"
+                placeholder="e.g. 'Exam in 3 days' or 'Learn guitar someday'"
+                value={captureText}
+                onChange={(e) => setCaptureText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleUniversalCapture()}
+                disabled={captureLoading}
+              />
+            </div>
+            <button
+              className="dash-btn btn-capture"
+              onClick={handleUniversalCapture}
+              disabled={captureLoading || !captureText.trim()}
+            >
+              {captureLoading ? '⏳' : '→'}
+            </button>
+          </div>
+          {captureResult?.success && (
+            <div className="capture-dash-success">
+              ✅ {captureResult.entry_type?.toUpperCase()}: {captureResult.entry?.title || 'Created!'}
+            </div>
+          )}
+          {captureResult && !captureResult.success && (
+            <div className="capture-dash-error">⚠️ {captureResult.error || 'Failed'}</div>
+          )}
         </div>
 
         <div className="card card-music" id="card-music">

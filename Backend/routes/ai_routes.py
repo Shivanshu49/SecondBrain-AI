@@ -22,6 +22,13 @@ from models.ai import (
     BrainDumpRequest,
     BrainDumpResponse,
 )
+from models.entry import (
+    CaptureRequest,
+    CaptureResponse,
+    InsightResponse,
+    ReflectionResponse,
+    RelatedEntry,
+)
 from services.score_service import calculate_life_score
 from services.alert_service import check_alerts
 from services.decision_service import get_recommended_task
@@ -32,9 +39,13 @@ from services.mental_service import analyze_mental_state
 from services.nlp_capture_service import parse_natural_task
 from services.goal_service import decompose_goal
 from services.braindump_service import process_brain_dump
+from services.capture_service import classify_and_capture
+from services.insight_service import generate_daily_insights
+from services.reflection_service import generate_reflection
+from services.connection_service import find_related_entries, update_related_ids
 from ai_handler import generate_response
 from utils.helpers import format_tasks_for_prompt, get_today_str
-from database import tasks_collection
+from database import tasks_collection, entries_collection
 
 router = APIRouter(prefix="/api/ai", tags=["AI Intelligence"])
 
@@ -111,7 +122,9 @@ async def get_prediction():
 # ─────────────────────────────────────────────
 @router.get("/schedule", response_model=ScheduleResponse)
 async def get_schedule(
-    hours: Optional[int] = Query(default=8, ge=1, le=16, description="Available working hours")
+    hours: Optional[int] = Query(
+        default=8, ge=1, le=16, description="Available working hours"
+    ),
 ):
     """
     Generate a time-blocked daily schedule using AI.
@@ -156,6 +169,8 @@ async def get_suggestions():
     and suggest what the user should focus on today.
     """
     tasks = list(tasks_collection.find({"status": "pending"}))
+    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+    tasks.extend(task_entries)
     task_text = format_tasks_for_prompt(tasks)
     today = get_today_str()
 
@@ -242,3 +257,70 @@ async def brain_dump(request: BrainDumpRequest):
     """
     result = await process_brain_dump(request.text)
     return BrainDumpResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 14. UNIVERSAL CAPTURE (Steps 2+3)
+# ─────────────────────────────────────────────
+@router.post("/capture", response_model=CaptureResponse)
+async def universal_capture(request: CaptureRequest):
+    """
+    Accept any raw text, AI classifies it as task/idea/note/goal,
+    extracts structured data, saves to entries collection.
+    Example: "Exam in 3 days" → auto-creates task with deadline
+    """
+    result = await classify_and_capture(request.text)
+    return CaptureResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 15. DAILY INSIGHTS (Step 4)
+# ─────────────────────────────────────────────
+@router.get("/insights", response_model=InsightResponse)
+async def get_insights():
+    """
+    Generate 2-3 daily AI insights from recent entries,
+    pending tasks, deadlines, and behavioral patterns.
+    """
+    result = await generate_daily_insights()
+    return InsightResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 16. BRAIN REFLECTION (Step 9)
+# ─────────────────────────────────────────────
+@router.get("/reflection", response_model=ReflectionResponse)
+async def get_reflection():
+    """
+    Analyze completed tasks and past entries to show
+    user growth, achievements, patterns, and suggestions.
+    """
+    result = await generate_reflection()
+    return ReflectionResponse(**result)
+
+
+# ─────────────────────────────────────────────
+# 17. ENTRY CONNECTIONS (Step 6)
+# ─────────────────────────────────────────────
+@router.get("/entries/{entry_id}/related", response_model=list[RelatedEntry])
+async def get_related_entries(entry_id: str):
+    """
+    Find entries related to a given entry by keyword similarity.
+    Returns related items with relevance scores.
+    """
+    result = find_related_entries(entry_id, limit=5)
+    return [RelatedEntry(**r) for r in result]
+
+
+@router.post("/entries/{entry_id}/connect")
+async def connect_entry(entry_id: str):
+    """
+    Update an entry's related_ids field with found connections.
+    """
+    related_ids = update_related_ids(entry_id)
+    return {
+        "success": True,
+        "entry_id": entry_id,
+        "related_count": len(related_ids),
+        "related_ids": related_ids,
+    }

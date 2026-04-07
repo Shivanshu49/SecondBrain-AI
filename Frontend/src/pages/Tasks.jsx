@@ -183,6 +183,11 @@ export default function Tasks() {
 
   const pendingCount = tasks.filter((t) => !t.completed).length
   const completedCount = tasks.filter((t) => t.completed).length
+  const typeCounts = {}
+  tasks.forEach((t) => {
+    const type = t.type || 'task'
+    typeCounts[type] = (typeCounts[type] || 0) + 1
+  })
 
   // Group tasks by group_id for visual grouping
   const goalGroups = {}
@@ -192,6 +197,8 @@ export default function Tasks() {
       goalGroups[t.group_id].push(t)
     }
   })
+
+  const typeIcons = { task: '✅', idea: '💡', note: '📝', goal: '🎯' }
 
   return (
     <main className="tasks-page">
@@ -412,6 +419,11 @@ export default function Tasks() {
                 {task.title}
               </span>
               <div className="tasks-card-meta">
+                {task.type && task.type !== 'task' && (
+                  <span className={`tasks-type tasks-type--${task.type}`}>
+                    {typeIcons[task.type] || '📋'} {task.type}
+                  </span>
+                )}
                 <span className={`tasks-priority tasks-priority--${task.priority}`}>
                   {task.priority?.toUpperCase()}
                 </span>
@@ -423,7 +435,7 @@ export default function Tasks() {
                 )}
                 {task.source && task.source !== 'manual' && (
                   <span className={`tasks-source tasks-source--${task.source}`}>
-                    {task.source === 'nlp' ? '✨ AI' : '🎯 Goal'}
+                    {task.source === 'nlp' ? '✨ AI' : task.source === 'goal' ? '🎯 Goal' : `via ${task.source}`}
                   </span>
                 )}
                 {task.group_id && (

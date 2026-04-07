@@ -687,6 +687,36 @@
   color: var(--white);
 }
 
+.tasks-source--capture {
+  background: #9c27b0;
+  color: var(--white);
+}
+
+.tasks-type {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 0;
+  border: 1.5px solid var(--black);
+}
+
+.tasks-type--idea {
+  background: #ffc107;
+  color: var(--black);
+}
+
+.tasks-type--note {
+  background: #2196f3;
+  color: var(--white);
+}
+
+.tasks-type--goal {
+  background: #9c27b0;
+  color: var(--white);
+}
+
 .tasks-group {
   font-family: var(--font-mono);
   font-size: 0.65rem;
@@ -813,6 +843,10 @@
 }
 
 [data-theme="dark"] .tasks-source {
+  border-color: #444;
+}
+
+[data-theme="dark"] .tasks-type {
   border-color: #444;
 }
 

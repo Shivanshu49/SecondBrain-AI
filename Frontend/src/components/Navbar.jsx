@@ -7,7 +7,7 @@ export default function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { isAuthenticated, logout, user } = useAuth()
-  const isApp = ['/dashboard', '/tasks', '/ai', '/schedule'].includes(location.pathname)
+  const isApp = ['/dashboard', '/tasks', '/ai', '/schedule', '/capture'].includes(location.pathname)
 
   const handleAboutClick = (e) => {
     e.preventDefault()
@@ -36,6 +36,7 @@ export default function Navbar() {
         {isApp ? (
           <>
             <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'nav-link--active' : ''}`} id="nav-dashboard">Dashboard</Link>
+            <Link to="/capture" className={`nav-link ${location.pathname === '/capture' ? 'nav-link--active' : ''}`} id="nav-capture">Capture</Link>
             <Link to="/tasks" className={`nav-link ${location.pathname === '/tasks' ? 'nav-link--active' : ''}`} id="nav-tasks">Tasks</Link>
             <Link to="/ai" className={`nav-link ${location.pathname === '/ai' ? 'nav-link--active' : ''}`} id="nav-ai">AI</Link>
             <Link to="/schedule" className={`nav-link ${location.pathname === '/schedule' ? 'nav-link--active' : ''}`} id="nav-schedule">Schedule</Link>

@@ -3,7 +3,7 @@ services/prediction_service.py — Life Prediction Engine
 Predicts whether the user will complete their tasks and provides guidance.
 """
 
-from database import tasks_collection
+from database import tasks_collection, entries_collection
 from ai_handler import generate_response
 from utils.helpers import format_tasks_for_prompt, hours_until_deadline, get_today_str
 from services.score_service import calculate_life_score
@@ -11,11 +11,20 @@ from services.score_service import calculate_life_score
 
 async def predict_outcomes() -> dict:
     """
-    Collect task data and behavioral patterns, then ask Gemini
+    Collect task data from both collections and behavioral patterns, then ask Gemini
     to predict success/failure and provide suggestions.
     """
     pending = list(tasks_collection.find({"status": "pending"}))
     completed = list(tasks_collection.find({"status": "completed"}))
+
+    task_entries_pending = list(
+        entries_collection.find({"type": "task", "status": "pending"})
+    )
+    task_entries_completed = list(
+        entries_collection.find({"type": "task", "status": "completed"})
+    )
+    pending.extend(task_entries_pending)
+    completed.extend(task_entries_completed)
     score_data = calculate_life_score()
 
     if len(pending) == 0 and len(completed) == 0:
@@ -32,13 +41,13 @@ async def predict_outcomes() -> dict:
 
     # Build behavioral context
     context = f"""USER STATS:
-- Total tasks: {score_data['total_tasks']}
-- Completed: {score_data['completed_tasks']}
-- Pending: {score_data['pending_tasks']}
-- Completion rate: {score_data['completion_rate']}%
-- Current streak: {score_data['streak']} days
-- Missed/overdue tasks: {score_data['missed_tasks']}
-- Productivity score: {score_data['score']}/100
+- Total tasks: {score_data["total_tasks"]}
+- Completed: {score_data["completed_tasks"]}
+- Pending: {score_data["pending_tasks"]}
+- Completion rate: {score_data["completion_rate"]}%
+- Current streak: {score_data["streak"]} days
+- Missed/overdue tasks: {score_data["missed_tasks"]}
+- Productivity score: {score_data["score"]}/100
 
 PENDING TASKS:
 {task_text}"""

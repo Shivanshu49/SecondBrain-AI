@@ -4,6 +4,18 @@ Re-exports all model classes for backward compatibility.
 """
 
 from models.task import TaskCreate, TaskUpdate, TaskResponse
+from models.entry import (
+    EntryCreate,
+    EntryUpdate,
+    EntryResponse,
+    CaptureRequest,
+    CaptureResponse,
+    InsightResponse,
+    ReflectionResponse,
+    RelatedEntry,
+    EntryType,
+    Priority,
+)
 from models.ai import (
     AIResponse,
     ScoreResponse,
@@ -30,6 +42,16 @@ __all__ = [
     "TaskCreate",
     "TaskUpdate",
     "TaskResponse",
+    "EntryCreate",
+    "EntryUpdate",
+    "EntryResponse",
+    "CaptureRequest",
+    "CaptureResponse",
+    "InsightResponse",
+    "ReflectionResponse",
+    "RelatedEntry",
+    "EntryType",
+    "Priority",
     "AIResponse",
     "ScoreResponse",
     "AlertDetail",

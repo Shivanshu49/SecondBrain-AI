@@ -22,6 +22,7 @@ def task_to_response(task: dict) -> dict:
     return {
         "id": str(task["_id"]),
         "title": task["title"],
+        "type": task.get("type", "task"),
         "deadline": task["deadline"],
         "status": task.get("status", "pending"),
         "priority": task.get("priority", "medium"),
@@ -50,6 +51,7 @@ async def create_task(task: TaskCreate):
         "completed_at": None,
         "source": task.source or "manual",
         "group_id": task.group_id,
+        "type": task.type or "task",
     }
 
     result = tasks_collection.insert_one(task_data)
@@ -63,9 +65,15 @@ async def create_task(task: TaskCreate):
 # ─────────────────────────────────────────────
 @router.get("", response_model=list[TaskResponse])
 async def get_all_tasks(
-    status: Optional[str] = Query(None, pattern="^(pending|completed)$", description="Filter by status"),
-    sort_by: Optional[str] = Query(None, pattern="^(deadline|priority|created_at)$", description="Sort field"),
-    order: Optional[str] = Query("asc", pattern="^(asc|desc)$", description="Sort order"),
+    status: Optional[str] = Query(
+        None, pattern="^(pending|completed)$", description="Filter by status"
+    ),
+    sort_by: Optional[str] = Query(
+        None, pattern="^(deadline|priority|created_at)$", description="Sort field"
+    ),
+    order: Optional[str] = Query(
+        "asc", pattern="^(asc|desc)$", description="Sort order"
+    ),
 ):
     """Fetch tasks with optional filtering and sorting."""
     # Build query filter
@@ -79,7 +87,9 @@ async def get_all_tasks(
     # Sort in Python (supports priority which needs custom ordering)
     if sort_by == "priority":
         reverse = order == "desc"
-        tasks.sort(key=lambda t: priority_to_int(t.get("priority", "medium")), reverse=reverse)
+        tasks.sort(
+            key=lambda t: priority_to_int(t.get("priority", "medium")), reverse=reverse
+        )
     elif sort_by == "deadline":
         reverse = order == "desc"
         tasks.sort(key=lambda t: t.get("deadline", ""), reverse=reverse)

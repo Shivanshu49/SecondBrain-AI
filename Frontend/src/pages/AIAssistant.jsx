@@ -5,6 +5,7 @@ import {
   getMentalState,
   getSuggestions,
   brainDump,
+  getReflection,
 } from '../api/secondbrain.js'
 import FloatingElements from '../components/FloatingElements.jsx'
 import '../styles/ai.css'
@@ -37,6 +38,9 @@ export default function AIAssistant() {
   const [dumpLoading, setDumpLoading] = useState(false)
   const [dumpResult, setDumpResult] = useState(null)
   const [dumpInput, setDumpInput] = useState('')
+  // Reflection
+  const [reflectionLoading, setReflectionLoading] = useState(false)
+  const [reflectionResult, setReflectionResult] = useState(null)
   // Error
   const [error, setError] = useState(null)
 
@@ -108,6 +112,20 @@ export default function AIAssistant() {
       setDumpLoading(false)
     }
   }, [dumpInput])
+
+  const runReflection = useCallback(async () => {
+    setReflectionLoading(true)
+    setReflectionResult(null)
+    setError(null)
+    try {
+      const res = await getReflection()
+      setReflectionResult(res)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setReflectionLoading(false)
+    }
+  }, [])
 
   return (
     <main className="ai-page">
@@ -343,6 +361,66 @@ export default function AIAssistant() {
                   {mentalResult.ai_response}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* ── BRAIN REFLECTION ── */}
+        <div className="ai-card ai-card--wide ai-card--reflection" id="card-reflection">
+          <div className="ai-card-header">
+            <span className="ai-card-icon">🪞</span>
+            <h2 className="ai-card-title">BRAIN REFLECTION</h2>
+          </div>
+          <p className="ai-card-desc">
+            Look back at your journey — AI analyzes your growth, achievements, and patterns.
+          </p>
+          <button
+            className="ai-action-btn"
+            onClick={runReflection}
+            disabled={reflectionLoading}
+          >
+            {reflectionLoading ? '⏳ Reflecting…' : '▶ REFLECT'}
+          </button>
+          {reflectionResult && reflectionResult.success && (
+            <div className="ai-result ai-reflection-result">
+              {reflectionResult.growth_summary && (
+                <div className="reflection-summary">{reflectionResult.growth_summary}</div>
+              )}
+              {reflectionResult.achievements?.length > 0 && (
+                <div className="reflection-section">
+                  <div className="reflection-section-title">🏆 Achievements</div>
+                  <ul className="reflection-list">
+                    {reflectionResult.achievements.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {reflectionResult.patterns?.length > 0 && (
+                <div className="reflection-section">
+                  <div className="reflection-section-title">📊 Patterns</div>
+                  <ul className="reflection-list">
+                    {reflectionResult.patterns.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {reflectionResult.suggestions?.length > 0 && (
+                <div className="reflection-section">
+                  <div className="reflection-section-title">💡 Suggestions</div>
+                  <ul className="reflection-list">
+                    {reflectionResult.suggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          {reflectionResult && !reflectionResult.success && (
+            <div className="ai-result ai-result--error">
+              ⚠️ {reflectionResult.error || 'Could not generate reflection. Try again later.'}
             </div>
           )}
         </div>

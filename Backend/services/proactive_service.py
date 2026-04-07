@@ -3,7 +3,7 @@ services/proactive_service.py — Proactive AI System
 Generates contextual suggestions when the user opens the dashboard.
 """
 
-from database import tasks_collection
+from database import tasks_collection, entries_collection
 from ai_handler import generate_response
 from utils.helpers import hours_until_deadline, get_today_str
 from services.score_service import calculate_life_score
@@ -11,11 +11,13 @@ from services.score_service import calculate_life_score
 
 async def get_proactive_insight() -> dict:
     """
-    Check the user's situation (missed tasks, low score, near deadlines)
+    Check the user's situation from both collections (missed tasks, low score, near deadlines)
     and generate a proactive suggestion via Gemini.
     """
     score_data = calculate_life_score()
     pending = list(tasks_collection.find({"status": "pending"}))
+    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+    pending.extend(task_entries)
 
     # Identify trigger conditions
     triggers = []
@@ -32,7 +34,9 @@ async def get_proactive_insight() -> dict:
 
     # Condition 2: Low productivity score
     if score_data["score"] < 40:
-        triggers.append(f"LOW SCORE: Productivity score is only {score_data['score']}/100")
+        triggers.append(
+            f"LOW SCORE: Productivity score is only {score_data['score']}/100"
+        )
 
     # Condition 3: Approaching deadlines (within 24h)
     urgent_titles = []
@@ -63,7 +67,7 @@ async def get_proactive_insight() -> dict:
         return {
             "success": True,
             "message": f"✅ You're doing great! Score: {score_data['score']}/100. "
-                       f"Streak: {score_data['streak']} days. Keep it up! 🔥",
+            f"Streak: {score_data['streak']} days. Keep it up! 🔥",
             "has_trigger": False,
         }
 
@@ -79,9 +83,9 @@ The user just opened their dashboard. Here's what I detected:
 {trigger_text}
 
 User stats:
-- Score: {score_data['score']}/100
-- Completed: {score_data['completed_tasks']}/{score_data['total_tasks']}
-- Streak: {score_data['streak']} days
+- Score: {score_data["score"]}/100
+- Completed: {score_data["completed_tasks"]}/{score_data["total_tasks"]}
+- Streak: {score_data["streak"]} days
 
 Generate a SHORT, direct, motivating message (2-3 sentences max).
 - Acknowledge what's wrong

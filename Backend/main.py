@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from database import check_connection
 from routes.tasks import router as tasks_router
+from routes.entries import router as entries_router
 from routes.ai_routes import router as ai_router
 from routes.auth_routes import router as auth_router
 
@@ -20,12 +21,12 @@ from routes.auth_routes import router as auth_router
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     # Startup
-    print("\n🧠 SecondBrain AI Backend starting up...")
+    print("\n[SecondBrain AI] Backend starting up...")
     check_connection()
-    print("🚀 Server is ready!\n")
+    print("[SecondBrain AI] Server is ready!\n")
     yield
     # Shutdown
-    print("\n👋 SecondBrain AI Backend shutting down...")
+    print("\n[SecondBrain AI] Backend shutting down...")
 
 
 # ─────────────────────────────────────────────
@@ -33,8 +34,8 @@ async def lifespan(app: FastAPI):
 # ─────────────────────────────────────────────
 app = FastAPI(
     title="SecondBrain AI",
-    description="An AI-powered task manager, decision engine, and prediction system.",
-    version="2.0.0",
+    description="An AI-powered brain system: Capture → Understand → Connect → Predict → Guide.",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -55,6 +56,7 @@ app.add_middleware(
 # MOUNT ROUTERS
 # ─────────────────────────────────────────────
 app.include_router(tasks_router)
+app.include_router(entries_router)
 app.include_router(ai_router)
 app.include_router(auth_router)
 
@@ -69,9 +71,14 @@ async def health_check():
         "status": "running",
         "service": "SecondBrain AI",
         "version": "3.0.0",
-        "message": "🧠 SecondBrain AI Backend is online!",
+        "message": "[SecondBrain AI] Backend is online!",
         "endpoints": {
             "tasks": "/api/tasks",
+            "entries": "/api/entries",
+            "capture": "/api/ai/capture",
+            "insights": "/api/ai/insights",
+            "reflection": "/api/ai/reflection",
+            "related": "/api/ai/entries/{id}/related",
             "score": "/api/ai/score",
             "alerts": "/api/ai/alerts",
             "decide": "/api/ai/decide",

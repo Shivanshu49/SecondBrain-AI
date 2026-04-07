@@ -4,18 +4,19 @@ Detects risky patterns and generates severity-based alerts.
 """
 
 from datetime import datetime, timezone
-from database import tasks_collection
+from database import tasks_collection, entries_collection
 from utils.helpers import parse_deadline, hours_until_deadline
 
 
 def check_alerts() -> dict:
     """
     Analyze user's tasks and generate failure alerts.
-
-    Returns a dict with: has_alerts, alerts (list of {message, severity}),
-    and context data for AI summary generation.
+    Now includes both tasks and entry-type tasks.
     """
     all_tasks = list(tasks_collection.find())
+    task_entries = list(entries_collection.find({"type": "task"}))
+    all_tasks.extend(task_entries)
+
     pending = [t for t in all_tasks if t.get("status") == "pending"]
     completed = [t for t in all_tasks if t.get("status") == "completed"]
 
@@ -29,22 +30,28 @@ def check_alerts() -> dict:
 
     # ── Condition 1: Low completion rate ──
     if completion_rate < 40 and total >= 3:
-        alerts.append({
-            "message": f"⚠️ Your completion rate is only {completion_rate:.0f}%. You're falling behind!",
-            "severity": "high",
-        })
+        alerts.append(
+            {
+                "message": f"⚠️ Your completion rate is only {completion_rate:.0f}%. You're falling behind!",
+                "severity": "high",
+            }
+        )
 
     # ── Condition 2: Too many pending tasks ──
     if len(pending) >= 8:
-        alerts.append({
-            "message": f"📋 You have {len(pending)} pending tasks. Consider prioritizing or removing some.",
-            "severity": "medium",
-        })
+        alerts.append(
+            {
+                "message": f"📋 You have {len(pending)} pending tasks. Consider prioritizing or removing some.",
+                "severity": "medium",
+            }
+        )
     elif len(pending) >= 5:
-        alerts.append({
-            "message": f"📋 You have {len(pending)} pending tasks piling up.",
-            "severity": "low",
-        })
+        alerts.append(
+            {
+                "message": f"📋 You have {len(pending)} pending tasks piling up.",
+                "severity": "low",
+            }
+        )
 
     # ── Condition 3: Overdue tasks ──
     now = datetime.now(timezone.utc)
@@ -62,21 +69,26 @@ def check_alerts() -> dict:
     if overdue_tasks:
         names = ", ".join(f'"{t}"' for t in overdue_tasks[:3])
         extra = f" (+{len(overdue_tasks) - 3} more)" if len(overdue_tasks) > 3 else ""
-        alerts.append({
-            "message": f"🔴 OVERDUE: {names}{extra}. These tasks are past their deadline!",
-            "severity": "critical",
-        })
+        alerts.append(
+            {
+                "message": f"🔴 OVERDUE: {names}{extra}. These tasks are past their deadline!",
+                "severity": "critical",
+            }
+        )
 
     if urgent_tasks:
         names = ", ".join(f'"{t}"' for t in urgent_tasks[:3])
         extra = f" (+{len(urgent_tasks) - 3} more)" if len(urgent_tasks) > 3 else ""
-        alerts.append({
-            "message": f"🟠 DUE SOON: {names}{extra}. Less than 24 hours remaining!",
-            "severity": "high",
-        })
+        alerts.append(
+            {
+                "message": f"🟠 DUE SOON: {names}{extra}. Less than 24 hours remaining!",
+                "severity": "high",
+            }
+        )
 
     # ── Condition 4: No recent completions ──
     from datetime import timedelta
+
     recent_completed = []
     for t in completed:
         dt = parse_deadline(t.get("completed_at") or t.get("created_at", ""))
@@ -84,14 +96,22 @@ def check_alerts() -> dict:
             recent_completed.append(t)
 
     if len(completed) > 0 and len(recent_completed) == 0 and len(pending) > 0:
-        alerts.append({
-            "message": "😴 You haven't completed anything in the last 3 days. Time to get moving!",
-            "severity": "medium",
-        })
+        alerts.append(
+            {
+                "message": "😴 You haven't completed anything in the last 3 days. Time to get moving!",
+                "severity": "medium",
+            }
+        )
 
     # Build context summary for AI
-    context = _build_context(total, len(completed), len(pending), completion_rate, 
-                              overdue_tasks, urgent_tasks)
+    context = _build_context(
+        total,
+        len(completed),
+        len(pending),
+        completion_rate,
+        overdue_tasks,
+        urgent_tasks,
+    )
 
     return {
         "has_alerts": len(alerts) > 0,

@@ -4,18 +4,19 @@ Computes productivity score, streaks, consistency, and missed tasks.
 """
 
 from datetime import datetime, timezone, timedelta
-from database import tasks_collection
+from database import tasks_collection, entries_collection
 from utils.helpers import parse_deadline
 
 
 def calculate_life_score() -> dict:
     """
     Calculate the user's overall life/productivity score.
-
-    Returns a dict with: score, total_tasks, completed_tasks, pending_tasks,
-    completion_rate, streak, consistency_score, missed_tasks.
+    Now includes both tasks and entry-type tasks.
     """
     all_tasks = list(tasks_collection.find())
+    task_entries = list(entries_collection.find({"type": "task"}))
+
+    all_tasks.extend(task_entries)
     total = len(all_tasks)
 
     if total == 0:
@@ -55,7 +56,9 @@ def calculate_life_score() -> dict:
     # Overall score: weighted formula
     #   50% completion rate + 25% consistency + 25% penalty for missed
     missed_penalty = min(missed * 5, 25)  # cap at 25 points deduction
-    raw_score = (completion_rate * 0.50) + (consistency * 0.25) + max(0, 25 - missed_penalty)
+    raw_score = (
+        (completion_rate * 0.50) + (consistency * 0.25) + max(0, 25 - missed_penalty)
+    )
     score = max(0, min(100, round(raw_score)))
 
     return {

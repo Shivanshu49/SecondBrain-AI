@@ -23,6 +23,7 @@ db = client["secondbrain"]
 
 # Collections
 tasks_collection = db["tasks"]
+entries_collection = db["entries"]
 activity_collection = db["activity_log"]
 users_collection = db["users"]
 
@@ -31,7 +32,9 @@ def check_connection():
     """Verify MongoDB connection is alive."""
     try:
         if "<user>" in MONGODB_URI or "<password>" in MONGODB_URI:
-            print("⚠️ MONGODB_URI still contains <user> or <password>. Update Backend/.env with real credentials.")
+            print(
+                "⚠️ MONGODB_URI still contains <user> or <password>. Update Backend/.env with real credentials."
+            )
             return False
 
         client.admin.command("ping")

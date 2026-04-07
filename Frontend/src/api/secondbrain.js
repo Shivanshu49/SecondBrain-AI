@@ -75,3 +75,50 @@ export function decomposeGoal(goal) {
 export function brainDump(text) {
   return apiFetch('/api/ai/braindump', { method: 'POST', body: JSON.stringify({ text }) })
 }
+
+// ─── STEP 2: Universal Capture ───
+export function universalCapture(text) {
+  return apiFetch('/api/ai/capture', { method: 'POST', body: JSON.stringify({ text }) })
+}
+
+// ─── STEP 4: Daily Insights ───
+export function getInsights() {
+  return apiFetch('/api/ai/insights')
+}
+
+// ─── STEP 9: Brain Reflection ───
+export function getReflection() {
+  return apiFetch('/api/ai/reflection')
+}
+
+// ─── STEP 6: Entry Connections ───
+export function getRelatedEntries(entryId) {
+  return apiFetch(`/api/ai/entries/${entryId}/related`)
+}
+
+export function connectEntry(entryId) {
+  return apiFetch(`/api/ai/entries/${entryId}/connect`, { method: 'POST' })
+}
+
+// ─── Entries CRUD ───
+export function getEntries(params = {}) {
+  const q = new URLSearchParams()
+  if (params.type) q.set('type', params.type)
+  if (params.status) q.set('status', params.status)
+  if (params.sort_by) q.set('sort_by', params.sort_by)
+  if (params.order) q.set('order', params.order)
+  const s = q.toString()
+  return apiFetch(`/api/entries${s ? `?${s}` : ''}`)
+}
+
+export function createEntry(body) {
+  return apiFetch('/api/entries', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function updateEntry(entryId, body) {
+  return apiFetch(`/api/entries/${entryId}`, { method: 'PATCH', body: JSON.stringify(body) })
+}
+
+export function deleteEntry(entryId) {
+  return apiFetch(`/api/entries/${entryId}`, { method: 'DELETE' })
+}

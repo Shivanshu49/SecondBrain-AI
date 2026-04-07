@@ -3,17 +3,19 @@ services/scheduler_service.py — Auto Scheduler / Smart Planner
 Generates a time-blocked daily schedule using Gemini.
 """
 
-from database import tasks_collection
+from database import tasks_collection, entries_collection
 from ai_handler import generate_json_response, generate_response
 from utils.helpers import format_tasks_for_prompt, get_today_str
 
 
 async def generate_daily_schedule(available_hours: int = 8) -> dict:
     """
-    Take pending tasks and available hours, ask Gemini
+    Take pending tasks from both collections and available hours, ask Gemini
     to create a structured daily schedule with time slots.
     """
     pending = list(tasks_collection.find({"status": "pending"}))
+    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+    pending.extend(task_entries)
 
     if not pending:
         return {
@@ -57,9 +59,9 @@ Rules:
     elif isinstance(json_result, dict):
         if "error" in json_result:
             # Fallback to text response
-            text_result = await generate_response(prompt.replace(
-                "Return a JSON array", "Return a formatted schedule"
-            ))
+            text_result = await generate_response(
+                prompt.replace("Return a JSON array", "Return a formatted schedule")
+            )
             return {
                 "success": True,
                 "schedule": [],
@@ -79,11 +81,13 @@ Rules:
     normalized = []
     for slot in schedule:
         if isinstance(slot, dict):
-            normalized.append({
-                "time": slot.get("time", ""),
-                "task": slot.get("task", ""),
-                "priority": slot.get("priority", "medium"),
-            })
+            normalized.append(
+                {
+                    "time": slot.get("time", ""),
+                    "task": slot.get("task", ""),
+                    "priority": slot.get("priority", "medium"),
+                }
+            )
 
     return {
         "success": True,

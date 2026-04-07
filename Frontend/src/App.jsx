@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Tasks from './pages/Tasks.jsx'
 import AIAssistant from './pages/AIAssistant.jsx'
 import Schedule from './pages/Schedule.jsx'
+import Capture from './pages/Capture.jsx'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
 
         {/* Protected routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/capture" element={<ProtectedRoute><Capture /></ProtectedRoute>} />
         <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
         <Route path="/ai" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
         <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />

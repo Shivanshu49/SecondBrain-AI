@@ -873,3 +873,180 @@
   box-shadow: 3px 3px 0 #000;
 }
 
+/* ========== INSIGHTS CARD ========== */
+.card-insights {
+  grid-column: 1 / -1;
+}
+
+.insight-mood {
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.7;
+  margin-left: 0.5rem;
+  text-transform: capitalize;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 255, 136, 0.03);
+  border: 1px solid rgba(0, 255, 136, 0.1);
+  border-radius: 8px;
+}
+
+.insight-number {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 50%;
+  background: var(--neon, #00ff88);
+  color: var(--black, #0a0a0a);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insight-text {
+  font-size: 0.9rem;
+  color: var(--text, #e0e0e0);
+  line-height: 1.4;
+}
+
+/* ========== UNIVERSAL CAPTURE CARD ========== */
+.card-capture {
+  grid-column: 1 / -1;
+}
+
+.capture-dash-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted, #8892b0);
+  margin: 0 0 0.75rem;
+}
+
+.capture-dash-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.capture-dash-input-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.capture-dash-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.capture-dash-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem 0.6rem 2.2rem;
+  background: var(--input-bg, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  border-radius: 6px;
+  color: var(--text, #333);
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.capture-dash-input:focus {
+  outline: none;
+  border-color: var(--neon, #00ff88);
+}
+
+.capture-dash-input::placeholder {
+  color: var(--text-muted, #8892b0);
+}
+
+.btn-capture {
+  min-width: 40px;
+  padding: 0.6rem 0.75rem;
+  background: var(--neon, #00ff88);
+  color: var(--black, #0a0a0a);
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-capture:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.3);
+}
+
+.btn-capture:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.capture-dash-success {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 255, 136, 0.08);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #00ff88;
+}
+
+.capture-dash-error {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 71, 87, 0.08);
+  border: 1px solid rgba(255, 71, 87, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #ff4757;
+}
+
+[data-theme="dark"] .capture-dash-input {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .capture-dash-success {
+  background: #1a3d2a;
+  color: #a8e6cf;
+  border-color: #333;
+}
+
+[data-theme="dark"] .capture-dash-error {
+  background: #3d1a1a;
+  color: #ff6b6b;
+  border-color: #333;
+}
+
+[data-theme="dark"] .btn-capture {
+  background: var(--neon);
+  color: #0a0a0a;
+  border-color: #000;
+  box-shadow: 3px 3px 0 #000;
+}
+
+[data-theme="dark"] .insight-item {
+  background: rgba(0, 255, 136, 0.03);
+  border-color: rgba(0, 255, 136, 0.1);
+}
+
+[data-theme="dark"] .insight-text {
+  color: #e0e0e0;
+}
+

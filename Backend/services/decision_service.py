@@ -3,17 +3,24 @@ services/decision_service.py — Autonomous Decision Engine
 Picks the best task for the user to work on next using AI analysis.
 """
 
-from database import tasks_collection
+from database import tasks_collection, entries_collection
 from ai_handler import generate_response
-from utils.helpers import format_tasks_for_prompt, hours_until_deadline, priority_to_int, get_today_str
+from utils.helpers import (
+    format_tasks_for_prompt,
+    hours_until_deadline,
+    priority_to_int,
+    get_today_str,
+)
 
 
 async def get_recommended_task() -> dict:
     """
-    Analyze pending tasks, sort by urgency + priority,
+    Analyze pending tasks from both collections, sort by urgency + priority,
     pick top candidates, and ask Gemini to select the best one.
     """
     pending = list(tasks_collection.find({"status": "pending"}))
+    task_entries = list(entries_collection.find({"type": "task", "status": "pending"}))
+    pending.extend(task_entries)
 
     if not pending:
         return {
