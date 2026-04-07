@@ -1,6 +1,7 @@
 """
 services/score_service.py — Life Score Calculator
 Computes productivity score, streaks, consistency, and missed tasks.
+Properly calculates based on user's actual task completion data.
 """
 
 from datetime import datetime, timezone, timedelta
@@ -11,7 +12,14 @@ from utils.helpers import parse_deadline
 def calculate_life_score(user_id: str = None) -> dict:
     """
     Calculate the user's overall life/productivity score.
-    Now includes both tasks and entry-type tasks.
+    Combines tasks collection and entry-type tasks.
+
+    Score formula:
+    - Base: completion_rate (0–100)
+    - Streak bonus: +up to 15 points for consistent daily completions
+    - Consistency bonus: +up to 10 points for recent activity
+    - Overdue penalty: -5 per overdue task (capped at -25)
+    - Minimum score is 0 when no tasks exist, not artificially inflated
     """
     query = {"user_id": user_id} if user_id else {}
     all_tasks = list(tasks_collection.find(query))
@@ -38,10 +46,10 @@ def calculate_life_score(user_id: str = None) -> dict:
     completed_count = len(completed)
     pending_count = len(pending)
 
-    # Completion rate
+    # Completion rate (0–100)
     completion_rate = round((completed_count / total) * 100, 1)
 
-    # Missed tasks — pending and past deadline
+    # Missed/overdue tasks — pending and past deadline
     now = datetime.now(timezone.utc)
     missed = 0
     for task in pending:
@@ -49,18 +57,23 @@ def calculate_life_score(user_id: str = None) -> dict:
         if dl and dl < now:
             missed += 1
 
-    # Streak — consecutive days (going backwards) with at least 1 completion
+    # Streak — consecutive days with at least 1 completion
     streak = _calculate_streak(completed)
 
     # Consistency score (0–100) based on streak and recent activity
     consistency = _calculate_consistency(completed, streak)
 
-    # Overall score: weighted formula
-    #   50% completion rate + 25% consistency + 25% penalty for missed
-    missed_penalty = min(missed * 5, 25)  # cap at 25 points deduction
-    raw_score = (
-        (completion_rate * 0.50) + (consistency * 0.25) + max(0, 25 - missed_penalty)
-    )
+    # ── Score Calculation ──
+    # Base: completion rate drives the score (0–100 range)
+    # Streak bonus: up to +15 for 7+ day streak
+    # Consistency bonus: up to +10 for high recent activity
+    # Overdue penalty: -5 per overdue task (max -25)
+
+    streak_bonus = min(streak * 2, 15)           # 0–15 points
+    consistency_bonus = min(consistency / 10, 10) # 0–10 points
+    overdue_penalty = min(missed * 5, 25)         # 0–25 penalty
+
+    raw_score = completion_rate + streak_bonus + consistency_bonus - overdue_penalty
     score = max(0, min(100, round(raw_score)))
 
     return {
@@ -80,7 +93,6 @@ def _calculate_streak(completed_tasks: list[dict]) -> int:
     if not completed_tasks:
         return 0
 
-    # Collect completion dates
     completion_dates = set()
     for task in completed_tasks:
         completed_at = task.get("completed_at")
@@ -89,7 +101,6 @@ def _calculate_streak(completed_tasks: list[dict]) -> int:
             if dt:
                 completion_dates.add(dt.date())
         else:
-            # Fallback: use created_at if completed_at is missing
             created = parse_deadline(task.get("created_at", ""))
             if created:
                 completion_dates.add(created.date())

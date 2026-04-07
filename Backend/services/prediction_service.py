@@ -1,6 +1,7 @@
 """
 services/prediction_service.py — Life Prediction Engine
 Predicts whether the user will complete their tasks and provides guidance.
+Uses actual task data to calculate data-driven confidence before AI analysis.
 """
 
 from database import tasks_collection, entries_collection
@@ -32,21 +33,47 @@ async def predict_outcomes(user_id: str = None) -> dict:
     task_entries_completed = list(entries_collection.find(e_comp))
     pending.extend(task_entries_pending)
     completed.extend(task_entries_completed)
-    score_data = calculate_life_score(user_id)
 
-    if len(pending) == 0 and len(completed) == 0:
+    total_pending = len(pending)
+    total_completed = len(completed)
+    total = total_pending + total_completed
+
+    # ── Edge case: No tasks at all ──
+    if total == 0:
         return {
             "success": True,
             "prediction": "neutral",
-            "confidence": "low",
+            "confidence": 0,
             "summary": "No tasks to analyze yet. Add some tasks to get predictions!",
             "suggestions": ["Start by adding your first task."],
         }
 
+    # ── Edge case: All done, no pending ──
+    if total_pending == 0 and total_completed > 0:
+        return {
+            "success": True,
+            "prediction": "success",
+            "confidence": 95,
+            "summary": f"Amazing! You've completed all {total_completed} tasks with nothing pending. Keep up the momentum!",
+            "suggestions": ["Set new goals to maintain your streak.", "Challenge yourself with harder tasks."],
+        }
+
+    score_data = calculate_life_score(user_id)
+
+    # ── Calculate data-driven confidence ──
+    confidence_pct = _calculate_confidence(score_data, pending, completed)
+
+    # ── Determine prediction from data ──
+    if score_data["completion_rate"] >= 70 and score_data["missed_tasks"] == 0:
+        prediction = "success"
+    elif score_data["completion_rate"] >= 40 or score_data["missed_tasks"] <= 1:
+        prediction = "partial"
+    else:
+        prediction = "failure"
+
     task_text = format_tasks_for_prompt(pending)
     today = get_today_str()
 
-    # Build behavioral context
     context = f"""USER STATS:
 - Total tasks: {score_data["total_tasks"]}
 - Completed: {score_data["completed_tasks"]}
@@ -66,16 +93,15 @@ Today is {today}.
 Here is the user's complete task data and behavioral analysis:
 {context}
 
-Your job:
-1. PREDICT: Will this user successfully complete their pending tasks? Answer: SUCCESS, PARTIAL, or FAILURE.
-2. CONFIDENCE: How confident are you? Answer: LOW, MEDIUM, or HIGH.
-3. SUMMARY: Give a 2-3 sentence assessment of their situation.
-4. SUGGESTIONS: List 3 specific, actionable suggestions to improve their outcomes.
+Based on the data, the prediction is: {prediction.upper()}
+Confidence: {confidence_pct}%
 
-Format your response EXACTLY like this:
-PREDICTION: [SUCCESS/PARTIAL/FAILURE]
-CONFIDENCE: [LOW/MEDIUM/HIGH]
-SUMMARY: [your assessment]
+Your job:
+1. Give a 2-3 sentence assessment of their situation based on the data.
+2. List 3 specific, actionable suggestions to improve their outcomes.
+
+Format your response as:
+SUMMARY: [your 2-3 sentence assessment]
 SUGGESTIONS:
 1. [suggestion 1]
 2. [suggestion 2]
@@ -83,47 +109,65 @@ SUGGESTIONS:
 
     result = await generate_response(prompt)
 
-    # Parse the response
-    prediction = "partial"
-    confidence = "medium"
+    # Parse the AI response for summary and suggestions
+    summary = result
     suggestions = []
 
     lines = result.split("\n")
-    for line in lines:
-        line_upper = line.strip().upper()
-        if line_upper.startswith("PREDICTION:"):
-            val = line.split(":", 1)[1].strip().upper()
-            if "SUCCESS" in val:
-                prediction = "success"
-            elif "FAILURE" in val:
-                prediction = "failure"
-            else:
-                prediction = "partial"
-        elif line_upper.startswith("CONFIDENCE:"):
-            val = line.split(":", 1)[1].strip().upper()
-            if "HIGH" in val:
-                confidence = "high"
-            elif "LOW" in val:
-                confidence = "low"
-            else:
-                confidence = "medium"
-
-    # Extract suggestions (numbered lines after SUGGESTIONS:)
     in_suggestions = False
     for line in lines:
         if "SUGGESTIONS:" in line.upper():
             in_suggestions = True
             continue
         if in_suggestions and line.strip():
-            # Remove leading numbers like "1. " or "- "
             cleaned = line.strip().lstrip("0123456789.-) ").strip()
             if cleaned:
                 suggestions.append(cleaned)
 
+    # Extract summary if formatted
+    for line in lines:
+        if line.strip().upper().startswith("SUMMARY:"):
+            summary = line.split(":", 1)[1].strip()
+            break
+
     return {
         "success": True,
         "prediction": prediction,
-        "confidence": confidence,
-        "summary": result,
-        "suggestions": suggestions[:5],
+        "confidence": confidence_pct,
+        "summary": summary,
+        "suggestions": suggestions[:5] if suggestions else ["Keep working on your tasks!", "Focus on overdue items first."],
     }
+
+
+def _calculate_confidence(score_data: dict, pending: list, completed: list) -> int:
+    """
+    Calculate a data-driven confidence percentage (0–100).
+    Based on:
+    - Completion rate (how much has user actually done)
+    - Streak (consistency indicator)
+    - Overdue ratio (risk factor)
+    - Total data points (more data = more confident in prediction)
+    """
+    total = score_data["total_tasks"]
+    if total == 0:
+        return 0
+
+    # Factor 1: Completion rate contributes up to 40 points
+    completion_factor = (score_data["completion_rate"] / 100) * 40
+
+    # Factor 2: Streak contributes up to 20 points (7+ day streak = max)
+    streak_factor = min(score_data["streak"] / 7 * 20, 20)
+
+    # Factor 3: Low overdue ratio contributes up to 20 points
+    pending_count = len(pending)
+    if pending_count > 0:
+        overdue_ratio = score_data["missed_tasks"] / pending_count
+        overdue_factor = max(0, (1 - overdue_ratio) * 20)
+    else:
+        overdue_factor = 20  # No pending = no overdue risk
+
+    # Factor 4: Data volume contributes up to 20 points (more tasks = more data)
+    data_factor = min(total / 10 * 20, 20)  # 10+ tasks = max confidence
+
+    confidence = round(completion_factor + streak_factor + overdue_factor + data_factor)
+    return max(5, min(100, confidence))  # Floor at 5% (never show 0% if tasks exist)

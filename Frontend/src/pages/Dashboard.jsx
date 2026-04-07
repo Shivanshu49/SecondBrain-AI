@@ -40,12 +40,6 @@ function formatDue(isoOrText) {
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-function confidenceToPercent(c) {
-  const v = (c || '').toLowerCase()
-  if (v === 'high') return 88
-  if (v === 'low') return 45
-  return 72
-}
 
 function mapTaskFromApi(t) {
   return {
@@ -156,9 +150,9 @@ export default function Dashboard() {
       if (prediction?.success) {
         const summary = prediction.summary || ''
         setPredFull(summary)
-        setConfidencePct(confidenceToPercent(prediction.confidence))
+        setConfidencePct(typeof prediction.confidence === 'number' ? prediction.confidence : 0)
       } else {
-        setPredFull('Predictions will appear once the backend and AI are configured.')
+        setPredFull('Predictions will appear once you add some tasks.')
         setConfidencePct(0)
       }
 

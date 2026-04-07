@@ -50,8 +50,8 @@ class DecisionResponse(BaseModel):
 class PredictionResponse(BaseModel):
     """Life prediction engine response."""
     success: bool
-    prediction: str = Field(default="", description="success or failure")
-    confidence: str = Field(default="", description="low, medium, or high")
+    prediction: str = Field(default="", description="success, partial, or failure")
+    confidence: int = Field(default=0, ge=0, le=100, description="Data-driven confidence 0–100")
     summary: str = ""
     suggestions: list[str] = []
 
