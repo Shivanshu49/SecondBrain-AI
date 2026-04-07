@@ -163,7 +163,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <FloatingElements items={['AI INSIDE', 'SMART > HARD', '→', '★', '◆', '▲']} />
+        <FloatingElements items={['AI INSIDE', 'SMART > HARD', '→', '', '', '▲']} />
       </main>
 
       {/* ===== ABOUT SLIDER SECTION ===== */}

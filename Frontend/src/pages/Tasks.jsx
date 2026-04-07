@@ -455,7 +455,7 @@ export default function Tasks() {
         ))}
       </div>
 
-      <FloatingElements items={['FOCUS', 'EXECUTE', 'SHIP IT', '→', '◆', '▲']} />
+      <FloatingElements items={['FOCUS', 'EXECUTE', 'SHIP IT', '→', '', '']} />
     </main>
   )
 }
