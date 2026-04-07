@@ -7,9 +7,11 @@ const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
 export async function apiFetch(path, options = {}) {
   const url = `${base}${path.startsWith('/') ? path : `/${path}`}`
+  const token = localStorage.getItem('sb-token')
   const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
     ...options,

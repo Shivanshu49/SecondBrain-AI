@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { universalCapture, getEntries, updateEntry, deleteEntry } from '../api/secondbrain.js'
 import FloatingElements from '../components/FloatingElements.jsx'
 import '../styles/capture.css'
@@ -35,6 +35,10 @@ export default function Capture() {
       setEntriesLoading(false)
     }
   }, [filter])
+
+  useEffect(() => {
+    loadEntries()
+  }, [loadEntries])
 
   const handleCapture = useCallback(async () => {
     if (!inputText.trim()) return

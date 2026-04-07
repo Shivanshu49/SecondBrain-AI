@@ -96,15 +96,10 @@ export default function Dashboard() {
     setError(null)
     setLoading(true)
     try {
-      const [taskList, score, alerts, decision, prediction, schedule, proactive, insightsData] = await Promise.all([
+      // Phase 1: Load non-AI data first (fast) — show dashboard immediately
+      const [taskList, score] = await Promise.all([
         getTasks({ sort_by: 'deadline', order: 'asc' }).catch(() => []),
         getScore().catch(() => null),
-        getAlerts().catch(() => null),
-        getDecision().catch(() => null),
-        getPrediction().catch(() => null),
-        getSchedule(8).catch(() => null),
-        getProactive().catch(() => null),
-        getInsights().catch(() => null),
       ])
 
       setTasks((taskList || []).map(mapTaskFromApi))
@@ -133,6 +128,11 @@ export default function Dashboard() {
         }, 18)
       }
 
+      // Show the dashboard NOW — AI data loads in background
+      setLoading(false)
+
+      // Phase 2: Load AI-powered data in background (fills in progressively)
+      const alerts = await getAlerts().catch(() => null)
       if (alerts?.has_alerts && alerts.alerts?.length) {
         setAlertPrimary(alerts.alerts[0].message)
         setAlertSub(alerts.ai_summary ? String(alerts.ai_summary).slice(0, 220) : '')
@@ -141,6 +141,7 @@ export default function Dashboard() {
         setAlertSub('Keep completing tasks to stay on track.')
       }
 
+      const decision = await getDecision().catch(() => null)
       if (decision?.success) {
         const reason = decision.reason || ''
         const pick = decision.selected_task
@@ -151,6 +152,7 @@ export default function Dashboard() {
         setDecisionReason('Could not load recommendation.')
       }
 
+      const prediction = await getPrediction().catch(() => null)
       if (prediction?.success) {
         const summary = prediction.summary || ''
         setPredFull(summary)
@@ -160,6 +162,7 @@ export default function Dashboard() {
         setConfidencePct(0)
       }
 
+      const schedule = await getSchedule(8).catch(() => null)
       if (schedule?.success && Array.isArray(schedule.schedule) && schedule.schedule.length) {
         setScheduleRows(schedule.schedule)
         setScheduleNotes(schedule.ai_notes || '')
@@ -168,12 +171,14 @@ export default function Dashboard() {
         setScheduleNotes(schedule?.ai_notes || 'Add pending tasks to generate a schedule.')
       }
 
+      const proactive = await getProactive().catch(() => null)
       if (proactive?.message) {
         setProactiveMsg(proactive.message)
       } else {
         setProactiveMsg('')
       }
 
+      const insightsData = await getInsights().catch(() => null)
       if (insightsData?.success && insightsData.insights?.length) {
         setInsights(insightsData.insights)
         setInsightMood(insightsData.mood || 'neutral')
@@ -183,7 +188,6 @@ export default function Dashboard() {
       }
     } catch (e) {
       setError(e.message || 'Failed to load dashboard')
-    } finally {
       setLoading(false)
     }
   }, [])
@@ -448,11 +452,11 @@ export default function Dashboard() {
             style={
               startBtnActive
                 ? {
-                    background: 'var(--black)',
-                    color: 'var(--neon)',
-                    transform: 'translate(2px, 2px)',
-                    boxShadow: '2px 2px 0 var(--black)',
-                  }
+                  background: 'var(--black)',
+                  color: 'var(--neon)',
+                  transform: 'translate(2px, 2px)',
+                  boxShadow: '2px 2px 0 var(--black)',
+                }
                 : {}
             }
           >
@@ -610,7 +614,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <FloatingElements items={['AI THINKING', 'OPTIMIZED', 'NO EXCUSES', '→', '◆', '▲']} />
+      <FloatingElements items={['AI THINKING', 'OPTIMIZED', 'NO EXCUSES', '', '', '']} />
     </main>
   )
 }
