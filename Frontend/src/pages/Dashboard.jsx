@@ -385,147 +385,255 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="dash-grid">
-        <div className="card card-tasks" id="card-tasks">
-          <div className="card-label">📋 TASKS</div>
-          <div className="task-list" id="task-list">
-            {tasks.length === 0 && !loading && (
-              <div className="task-row task-row--empty">No tasks yet. Add one below — data syncs with the FastAPI backend.</div>
-            )}
-            {tasks.map((task) => (
-              <div className="task-row" key={task.id}>
-                <span
-                  className={`dash-task-check ${task.done ? 'dash-task-check--done' : 'dash-task-check--empty'}`}
-                  onClick={() => toggleTask(task.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && toggleTask(task.id)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {task.done ? '✓' : ''}
-                </span>
-                <span className={`task-text ${task.done ? 'task-text--done' : ''}`}>{task.text}</span>
-                <span className="task-due">{task.due}</span>
-              </div>
-            ))}
-          </div>
-          <button
-            className="dash-btn btn-add"
-            onClick={() => {
-              setShowForm(!showForm)
-              if (!showForm) setTimeout(() => taskInputRef.current?.focus(), 50)
-            }}
-          >
-            + ADD TASK
-          </button>
+      {/* ═══════════════════════════════════════════════
+          SECTION 1: Tasks + Score + Prediction (100vh)
+          ═══════════════════════════════════════════════ */}
+      <section className="dash-section dash-section--1">
+        <div className="dash-section-grid dash-section-grid--1">
+          {/* LEFT: Tasks — full height */}
+          <div className="card card-tasks" id="card-tasks">
+            <div className="card-label">📋 TASKS</div>
+            <div className="task-list" id="task-list">
+              {tasks.length === 0 && !loading && (
+                <div className="task-row task-row--empty">No tasks yet. Add one below — data syncs with the FastAPI backend.</div>
+              )}
+              {tasks.map((task) => (
+                <div className="task-row" key={task.id}>
+                  <span
+                    className={`dash-task-check ${task.done ? 'dash-task-check--done' : 'dash-task-check--empty'}`}
+                    onClick={() => toggleTask(task.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && toggleTask(task.id)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    {task.done ? '✓' : ''}
+                  </span>
+                  <span className={`task-text ${task.done ? 'task-text--done' : ''}`}>{task.text}</span>
+                  <span className="task-due">{task.due}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              className="dash-btn btn-add"
+              onClick={() => {
+                setShowForm(!showForm)
+                if (!showForm) setTimeout(() => taskInputRef.current?.focus(), 50)
+              }}
+            >
+              + ADD TASK
+            </button>
 
-          {showForm && (
-            <div className="add-task-form">
-              <input
-                ref={taskInputRef}
-                type="text"
-                className="task-input"
-                placeholder="Task name..."
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTask()}
-              />
-              <input
-                type="datetime-local"
-                className="task-input task-input--sm"
-                value={taskDueLocal}
-                onChange={(e) => setTaskDueLocal(e.target.value)}
-              />
-              <button type="button" className="dash-btn btn-confirm" onClick={addTask}>
-                ADD
+            {showForm && (
+              <div className="add-task-form">
+                <input
+                  ref={taskInputRef}
+                  type="text"
+                  className="task-input"
+                  placeholder="Task name..."
+                  value={taskName}
+                  onChange={(e) => setTaskName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addTask()}
+                />
+                <input
+                  type="datetime-local"
+                  className="task-input task-input--sm"
+                  value={taskDueLocal}
+                  onChange={(e) => setTaskDueLocal(e.target.value)}
+                />
+                <button type="button" className="dash-btn btn-confirm" onClick={addTask}>
+                  ADD
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT: Score + Prediction stacked */}
+          <div className="dash-section-right-stack">
+            <div className="card card-score" id="card-score">
+              <div className="card-label">🧠 YOUR SCORE</div>
+              <div className="score-big">{mainScore}%</div>
+              <div className="score-breakdown">
+                <div className="score-row">
+                  <span className="score-row-label">PRODUCTIVITY</span>
+                  <div className="bar-track">
+                    <div className="bar-fill bar-fill--prod" data-target={prodTarget} style={{ width: 0 }}></div>
+                  </div>
+                  <span className="score-row-val">{prodScore}%</span>
+                </div>
+                <div className="score-row">
+                  <span className="score-row-label">CONSISTENCY</span>
+                  <div className="bar-track">
+                    <div className="bar-fill bar-fill--cons" data-target={consTarget} style={{ width: 0 }}></div>
+                  </div>
+                  <span className="score-row-val">{consScore}%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="card card-prediction" id="card-prediction">
+              <div className="card-label">🔮 PREDICTION</div>
+              <div className="prediction-box">
+                <div className="prediction-icon">⚠</div>
+                <p className="prediction-text">{predText}</p>
+              </div>
+              <div className="prediction-confidence">
+                <span>CONFIDENCE:</span>
+                <span className="confidence-val">{confidencePct}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── THIN DIVIDER ─── */}
+      <div className="dash-divider"></div>
+
+      {/* ═══════════════════════════════════════════════
+          SECTION 2: Do This Now + AI Schedule (100vh)
+          ═══════════════════════════════════════════════ */}
+      <section className="dash-section dash-section--2">
+        <div className="dash-section-grid dash-section-grid--2">
+          {/* LEFT: Do This Now — full height */}
+          <div className="card card-decision" id="card-decision">
+            <div className="card-label">🧠 DO THIS NOW</div>
+            <p className="decision-text">{decisionReason}</p>
+            <button
+              type="button"
+              className="dash-btn btn-start"
+              onClick={handleStartTask}
+              style={
+                startBtnActive
+                  ? {
+                    background: 'var(--black)',
+                    color: 'var(--neon)',
+                    transform: 'translate(2px, 2px)',
+                    boxShadow: '2px 2px 0 var(--black)',
+                  }
+                  : {}
+              }
+            >
+              {startBtnText}
+            </button>
+          </div>
+
+          {/* RIGHT: AI Schedule — full height */}
+          <div className="card card-schedule" id="card-schedule">
+            <div className="card-label">⏱️ AI SCHEDULE</div>
+            <div className="schedule-list">
+              {scheduleRows.length === 0 && (
+                <div className="schedule-row schedule-row--muted">
+                  <span className="schedule-task">{scheduleNotes || 'No schedule slots yet.'}</span>
+                </div>
+              )}
+              {scheduleRows.map((row, i) => (
+                <div className={`schedule-row ${i === 0 ? 'schedule-row--active' : ''}`} key={`${row.time}-${row.task}-${i}`}>
+                  <span className="schedule-time">{row.time}</span>
+                  <span className="schedule-sep">→</span>
+                  <span className="schedule-task">{row.task}</span>
+                  <span className={`schedule-status ${i === 0 ? 'schedule-status--now' : ''}`}>{i === 0 ? 'NOW' : ''}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── THIN DIVIDER ─── */}
+      <div className="dash-divider"></div>
+
+      {/* ═══════════════════════════════════════════════
+          SECTION 3: Remaining cards
+          ═══════════════════════════════════════════════ */}
+      <section className="dash-section dash-section--3">
+        <div className="dash-grid-remaining">
+          <div className="card card-alert" id="card-alert">
+            <div className="card-label">⚠️ ALERT</div>
+            <div className="alert-box">
+              <div className="alert-icon">🚨</div>
+              <p className="alert-text">{alertPrimary}</p>
+            </div>
+            {alertSub && <div className="alert-sub">{alertSub}</div>}
+          </div>
+
+          <div className="card card-music" id="card-music">
+            <div className="card-label">🎵 FOCUS MODE</div>
+            <iframe
+              style={{ border: 0, width: '100%', height: '100%', minHeight: '80px' }}
+              src="https://open.spotify.com/embed/playlist/0vvXsWCC9xrXsKd4FyS8kM?utm_source=generator&theme=0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              title="Spotify Focus Playlist"
+            ></iframe>
+          </div>
+
+          <div className="card card-capture" id="card-capture">
+            <div className="card-label">🧠 UNIVERSAL CAPTURE</div>
+            <p className="capture-dash-desc">Type anything — AI classifies as task, idea, note, or goal</p>
+            <div className="capture-dash-row">
+              <div className="capture-dash-input-wrap">
+                <span className="capture-dash-icon">✨</span>
+                <input
+                  type="text"
+                  className="capture-dash-input"
+                  placeholder="e.g. 'Exam in 3 days' or 'Learn guitar someday'"
+                  value={captureText}
+                  onChange={(e) => setCaptureText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleUniversalCapture()}
+                  disabled={captureLoading}
+                />
+              </div>
+              <button
+                className="dash-btn btn-capture"
+                onClick={handleUniversalCapture}
+                disabled={captureLoading || !captureText.trim()}
+              >
+                {captureLoading ? '⏳' : '→'}
               </button>
             </div>
-          )}
-        </div>
-
-        <div className="card card-decision" id="card-decision">
-          <div className="card-label">🧠 DO THIS NOW</div>
-          <p className="decision-text">{decisionReason}</p>
-          <button
-            type="button"
-            className="dash-btn btn-start"
-            onClick={handleStartTask}
-            style={
-              startBtnActive
-                ? {
-                  background: 'var(--black)',
-                  color: 'var(--neon)',
-                  transform: 'translate(2px, 2px)',
-                  boxShadow: '2px 2px 0 var(--black)',
-                }
-                : {}
-            }
-          >
-            {startBtnText}
-          </button>
-        </div>
-
-        <div className="card card-schedule" id="card-schedule">
-          <div className="card-label">⏱️ AI SCHEDULE</div>
-          <div className="schedule-list">
-            {scheduleRows.length === 0 && (
-              <div className="schedule-row schedule-row--muted">
-                <span className="schedule-task">{scheduleNotes || 'No schedule slots yet.'}</span>
+            {captureResult?.success && (
+              <div className="capture-dash-success">
+                ✅ {captureResult.entry_type?.toUpperCase()}: {captureResult.entry?.title || 'Created!'}
               </div>
             )}
-            {scheduleRows.map((row, i) => (
-              <div className={`schedule-row ${i === 0 ? 'schedule-row--active' : ''}`} key={`${row.time}-${row.task}-${i}`}>
-                <span className="schedule-time">{row.time}</span>
-                <span className="schedule-sep">→</span>
-                <span className="schedule-task">{row.task}</span>
-                <span className={`schedule-status ${i === 0 ? 'schedule-status--now' : ''}`}>{i === 0 ? 'NOW' : ''}</span>
-              </div>
-            ))}
+            {captureResult && !captureResult.success && (
+              <div className="capture-dash-error">⚠️ {captureResult.error || 'Failed'}</div>
+            )}
           </div>
-        </div>
 
-        <div className="card card-score" id="card-score">
-          <div className="card-label">🧠 YOUR SCORE</div>
-          <div className="score-big">{mainScore}%</div>
-          <div className="score-breakdown">
-            <div className="score-row">
-              <span className="score-row-label">PRODUCTIVITY</span>
-              <div className="bar-track">
-                <div className="bar-fill bar-fill--prod" data-target={prodTarget} style={{ width: 0 }}></div>
+          <div className="card card-nlp" id="card-nlp">
+            <div className="card-label">⚡ QUICK CAPTURE</div>
+            <p className="nlp-dash-desc">Type anything — AI creates the task for you</p>
+            <div className="nlp-dash-row">
+              <div className="nlp-dash-input-wrap">
+                <span className="nlp-dash-sparkle">✨</span>
+                <input
+                  type="text"
+                  className="nlp-dash-input"
+                  placeholder="e.g. 'Call dentist tomorrow at 3pm'"
+                  value={nlpText}
+                  onChange={(e) => setNlpText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNlpCapture()}
+                  disabled={nlpLoading}
+                />
               </div>
-              <span className="score-row-val">{prodScore}%</span>
+              <button
+                className="dash-btn btn-nlp"
+                onClick={handleNlpCapture}
+                disabled={nlpLoading || !nlpText.trim()}
+              >
+                {nlpLoading ? '⏳' : '→'}
+              </button>
             </div>
-            <div className="score-row">
-              <span className="score-row-label">CONSISTENCY</span>
-              <div className="bar-track">
-                <div className="bar-fill bar-fill--cons" data-target={consTarget} style={{ width: 0 }}></div>
-              </div>
-              <span className="score-row-val">{consScore}%</span>
-            </div>
+            {nlpSuccess && (
+              <div className="nlp-dash-success">✅ Created: {nlpSuccess}</div>
+            )}
           </div>
         </div>
+      </section>
 
-        <div className="card card-prediction" id="card-prediction">
-          <div className="card-label">🔮 PREDICTION</div>
-          <div className="prediction-box">
-            <div className="prediction-icon">⚠</div>
-            <p className="prediction-text">{predText}</p>
-          </div>
-          <div className="prediction-confidence">
-            <span>CONFIDENCE:</span>
-            <span className="confidence-val">{confidencePct}%</span>
-          </div>
-        </div>
-
-        <div className="card card-alert" id="card-alert">
-          <div className="card-label">⚠️ ALERT</div>
-          <div className="alert-box">
-            <div className="alert-icon">🚨</div>
-            <p className="alert-text">{alertPrimary}</p>
-          </div>
-          {alertSub && <div className="alert-sub">{alertSub}</div>}
-        </div>
-
-        {insights.length > 0 && (
+      {/* Insights below the 2x2 grid */}
+      {insights.length > 0 && (
+        <div className="dash-insights-extra">
           <div className="card card-insights" id="card-insights">
             <div className="card-label">💡 DAILY INSIGHTS <span className="insight-mood">Mood: {insightMood}</span></div>
             <div className="insights-list">
@@ -537,82 +645,8 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-        )}
-
-        <div className="card card-capture" id="card-capture">
-          <div className="card-label">🧠 UNIVERSAL CAPTURE</div>
-          <p className="capture-dash-desc">Type anything — AI classifies as task, idea, note, or goal</p>
-          <div className="capture-dash-row">
-            <div className="capture-dash-input-wrap">
-              <span className="capture-dash-icon">✨</span>
-              <input
-                type="text"
-                className="capture-dash-input"
-                placeholder="e.g. 'Exam in 3 days' or 'Learn guitar someday'"
-                value={captureText}
-                onChange={(e) => setCaptureText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleUniversalCapture()}
-                disabled={captureLoading}
-              />
-            </div>
-            <button
-              className="dash-btn btn-capture"
-              onClick={handleUniversalCapture}
-              disabled={captureLoading || !captureText.trim()}
-            >
-              {captureLoading ? '⏳' : '→'}
-            </button>
-          </div>
-          {captureResult?.success && (
-            <div className="capture-dash-success">
-              ✅ {captureResult.entry_type?.toUpperCase()}: {captureResult.entry?.title || 'Created!'}
-            </div>
-          )}
-          {captureResult && !captureResult.success && (
-            <div className="capture-dash-error">⚠️ {captureResult.error || 'Failed'}</div>
-          )}
         </div>
-
-        <div className="card card-music" id="card-music">
-          <div className="card-label">🎵 FOCUS MODE</div>
-          <iframe
-            style={{ border: 0, width: '100%', height: '100%', minHeight: '80px' }}
-            src="https://open.spotify.com/embed/playlist/0vvXsWCC9xrXsKd4FyS8kM?utm_source=generator&theme=0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-            title="Spotify Focus Playlist"
-          ></iframe>
-        </div>
-
-        <div className="card card-nlp" id="card-nlp">
-          <div className="card-label">⚡ QUICK CAPTURE</div>
-          <p className="nlp-dash-desc">Type anything — AI creates the task for you</p>
-          <div className="nlp-dash-row">
-            <div className="nlp-dash-input-wrap">
-              <span className="nlp-dash-sparkle">✨</span>
-              <input
-                type="text"
-                className="nlp-dash-input"
-                placeholder="e.g. 'Call dentist tomorrow at 3pm'"
-                value={nlpText}
-                onChange={(e) => setNlpText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleNlpCapture()}
-                disabled={nlpLoading}
-              />
-            </div>
-            <button
-              className="dash-btn btn-nlp"
-              onClick={handleNlpCapture}
-              disabled={nlpLoading || !nlpText.trim()}
-            >
-              {nlpLoading ? '⏳' : '→'}
-            </button>
-          </div>
-          {nlpSuccess && (
-            <div className="nlp-dash-success">✅ Created: {nlpSuccess}</div>
-          )}
-        </div>
-      </div>
+      )}
 
       <FloatingElements items={['AI THINKING', 'OPTIMIZED', 'NO EXCUSES', '', '', '']} />
     </main>

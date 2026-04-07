@@ -426,7 +426,7 @@ export default function AIAssistant() {
         </div>
       </div>
 
-      <FloatingElements items={['AI THINKING', 'GEMINI', 'NEURAL', '→', '◆', '▲']} />
+      <FloatingElements items={['AI THINKING', 'GEMINI', 'NEURAL', '→', '', '']} />
     </main>
   )
 }
