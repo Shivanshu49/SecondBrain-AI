@@ -6,7 +6,8 @@ export function useAuth() {
   return useContext(AuthContext)
 }
 
-const API = '/api/auth'
+const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+const API = `${BASE}/api/auth`
 
 async function authFetch(path, body) {
   const res = await fetch(`${API}${path}`, {
@@ -14,7 +15,13 @@ async function authFetch(path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  const data = await res.json()
+  const text = await res.text()
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new Error('Server returned an invalid response. Please try again.')
+  }
   if (!res.ok) throw new Error(data.detail || 'Auth failed')
   return data
 }
