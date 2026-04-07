@@ -105,7 +105,7 @@ export default function About() {
         </div>
       </footer>
 
-      <FloatingElements items={['BUILT FOR SPEED', 'LOGIC FIRST', 'ZERO FRICTION', '★', '◆', '▲']} />
+      <FloatingElements items={['BUILT FOR SPEED', 'LOGIC FIRST', 'ZERO FRICTION', '★', '', '']} />
     </main>
   )
 }

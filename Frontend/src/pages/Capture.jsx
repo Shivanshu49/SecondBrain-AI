@@ -218,7 +218,7 @@ export default function Capture() {
         </div>
       </div>
 
-      <FloatingElements items={['CAPTURE', 'CLASSIFY', 'ORGANIZE', '→', '◆', '▲']} />
+      <FloatingElements items={['CAPTURE', 'CLASSIFY', 'ORGANIZE', '→', '', '']} />
     </main>
   )
 }

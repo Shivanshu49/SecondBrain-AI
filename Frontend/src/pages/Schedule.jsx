@@ -119,7 +119,7 @@ export default function Schedule() {
         </div>
       )}
 
-      <FloatingElements items={['PLANNED', 'OPTIMIZED', 'ON TIME', '→', '◆', '▲']} />
+      <FloatingElements items={['PLANNED', 'OPTIMIZED', 'ON TIME', '→', '', '']} />
     </main>
   )
 }
