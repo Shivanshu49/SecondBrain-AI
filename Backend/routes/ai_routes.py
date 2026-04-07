@@ -79,7 +79,20 @@ async def get_alerts(request: Request):
 {context}
 
 Write a brief, direct summary (2-3 sentences) of the situation and what they should do first. Be motivating, not harsh."""
-        ai_summary = await generate_response(prompt)
+        try:
+            ai_summary = await generate_response(prompt)
+            # Check if AI returned a rate-limit message
+            if "rate-limited" in ai_summary.lower() or "⏳" in ai_summary:
+                # Build local summary from alert data
+                alert_msgs = [a["message"] for a in alert_data["alerts"]]
+                critical = [a for a in alert_data["alerts"] if a["severity"] in ("critical", "high")]
+                if critical:
+                    ai_summary = f"You have {len(critical)} urgent alert(s). Focus on your most critical items first — tackle one at a time and you'll be back on track."
+                else:
+                    ai_summary = "A few things need your attention. Review your alerts above and address them to keep your productivity on track."
+        except Exception as e:
+            print(f"⚠️ Alert AI summary failed: {e}")
+            ai_summary = "Review the alerts above and prioritize your most urgent items."
 
     return AlertResponse(
         has_alerts=alert_data["has_alerts"],

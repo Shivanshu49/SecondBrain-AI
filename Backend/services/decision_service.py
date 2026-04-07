@@ -68,11 +68,33 @@ SELECTED: [exact task title]
 REASON: [2-3 sentences explaining why]
 ALTERNATIVES: [brief note about other tasks]"""
 
-    result = await generate_response(prompt)
+    try:
+        result = await generate_response(prompt)
+    except Exception as e:
+        print(f"⚠️ Decision AI call failed: {e}")
+        result = None
 
     # Extract the selected task title from the response
     selected_title = candidates[0]["title"]  # Default to first
     selected_id = str(candidates[0]["_id"])
+
+    # If AI failed or returned rate-limit message, use data-driven fallback
+    if not result or "rate-limited" in str(result).lower() or "⏳" in str(result):
+        h = hours_until_deadline(candidates[0].get("deadline", ""))
+        if h is not None and h < 0:
+            reason = f"This task is overdue! It was due {abs(round(h))} hours ago. Tackle it first to clear your backlog."
+        elif h is not None and h <= 24:
+            reason = f"This task is due in {round(h)} hours — it's your most urgent item. Focus on it now."
+        else:
+            reason = f"Based on priority and deadline, this is your best next task. Get it done!"
+        alternatives = [c["title"] for c in candidates if c["title"] != selected_title]
+        return {
+            "success": True,
+            "selected_task": selected_title,
+            "task_id": selected_id,
+            "reason": reason,
+            "alternatives": alternatives,
+        }
 
     for candidate in candidates:
         if candidate["title"].lower() in result.lower():

@@ -64,14 +64,12 @@ Rules:
         ai_notes = ""
     elif isinstance(json_result, dict):
         if "error" in json_result:
-            # Fallback to text response
-            text_result = await generate_response(
-                prompt.replace("Return a JSON array", "Return a formatted schedule")
-            )
+            # AI failed — generate a basic local schedule instead of calling AI again
+            schedule = _generate_local_schedule(pending, available_hours)
             return {
                 "success": True,
-                "schedule": [],
-                "ai_notes": text_result,
+                "schedule": schedule,
+                "ai_notes": "📋 Auto-generated schedule (AI temporarily unavailable). Tasks ordered by urgency.",
             }
         schedule = json_result.get("schedule", json_result.get("slots", []))
         ai_notes = json_result.get("ai_notes", "")
@@ -100,3 +98,93 @@ Rules:
         "schedule": normalized,
         "ai_notes": ai_notes,
     }
+
+
+def _generate_local_schedule(pending: list, available_hours: int) -> list:
+    """
+    Generate a simple time-blocked schedule locally when AI is unavailable.
+    Distributes tasks across available hours starting at 9 AM.
+    """
+    from utils.helpers import hours_until_deadline, priority_to_int
+
+    # Sort by urgency then priority
+    def sort_key(task):
+        h = hours_until_deadline(task.get("deadline", ""))
+        urgency = h if h is not None else 9999
+        pri = priority_to_int(task.get("priority", "medium"))
+        return (urgency, -pri)
+
+    pending.sort(key=sort_key)
+
+    schedule = []
+    hour = 9  # Start at 9 AM
+    minutes = 0
+    slots_used = 0
+    max_slots = available_hours  # ~1 task per hour
+
+    # Morning warm-up
+    schedule.append({
+        "time": "9:00 AM - 9:15 AM",
+        "task": "☀️ Morning Warm-up: Review your priorities",
+        "priority": "low",
+    })
+    hour = 9
+    minutes = 15
+
+    for task in pending[:max_slots]:
+        # Format start time
+        start_h = hour
+        start_m = minutes
+        start_period = "AM" if start_h < 12 else "PM"
+        start_display = start_h if start_h <= 12 else start_h - 12
+        if start_display == 0:
+            start_display = 12
+
+        # Add 60 minutes for the task
+        end_h = start_h + 1
+        end_m = start_m
+        end_period = "AM" if end_h < 12 else "PM"
+        end_display = end_h if end_h <= 12 else end_h - 12
+        if end_display == 0:
+            end_display = 12
+
+        time_str = f"{start_display}:{start_m:02d} {start_period} - {end_display}:{end_m:02d} {end_period}"
+
+        schedule.append({
+            "time": time_str,
+            "task": task.get("title", "Untitled"),
+            "priority": task.get("priority", "medium"),
+        })
+
+        hour = end_h
+        minutes = end_m
+        slots_used += 1
+
+        # Add a break every 2 tasks
+        if slots_used % 2 == 0 and slots_used < max_slots:
+            brk_period = "AM" if hour < 12 else "PM"
+            brk_display = hour if hour <= 12 else hour - 12
+            if brk_display == 0:
+                brk_display = 12
+            brk_end = hour
+            brk_end_m = minutes + 15
+            if brk_end_m >= 60:
+                brk_end += 1
+                brk_end_m -= 60
+            brk_end_period = "AM" if brk_end < 12 else "PM"
+            brk_end_display = brk_end if brk_end <= 12 else brk_end - 12
+            if brk_end_display == 0:
+                brk_end_display = 12
+
+            schedule.append({
+                "time": f"{brk_display}:{minutes:02d} {brk_period} - {brk_end_display}:{brk_end_m:02d} {brk_end_period}",
+                "task": "☕ Short Break",
+                "priority": "low",
+            })
+            hour = brk_end
+            minutes = brk_end_m
+
+        if hour >= 9 + available_hours:
+            break
+
+    return schedule

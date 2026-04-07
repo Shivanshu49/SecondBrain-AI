@@ -101,7 +101,30 @@ Generate a SHORT, direct, motivating message (2-3 sentences max).
 
 Example: "You missed 2 tasks yesterday. Let's reschedule them for today — start with 'Project Report' since it's overdue. You've got this! 💪" """
 
-    result = await generate_response(prompt)
+    try:
+        result = await generate_response(prompt)
+    except Exception as e:
+        print(f"⚠️ Proactive AI call failed: {e}")
+        result = None
+
+    # If AI failed or returned rate-limit message, use data-driven fallback
+    if not result or "rate-limited" in str(result).lower() or "⏳" in str(result):
+        # Build a local proactive message from triggers
+        if overdue_titles:
+            fallback = f"⚡ You have {len(overdue_titles)} overdue task(s) — start with \"{overdue_titles[0]}\" to get back on track!"
+        elif urgent_titles:
+            fallback = f"⏰ \"{urgent_titles[0]}\" is due within 24 hours. Focus on it now to stay ahead!"
+        elif score_data["score"] < 40:
+            fallback = f"📊 Your score is {score_data['score']}/100. Complete a quick task to build momentum! 💪"
+        elif score_data["streak"] == 0:
+            fallback = "🔥 No streak yet — complete one task today to start building consistency!"
+        else:
+            fallback = f"📋 You have {score_data['pending_tasks']} pending tasks. Pick the most important one and go! 🚀"
+        return {
+            "success": True,
+            "message": fallback,
+            "has_trigger": True,
+        }
 
     return {
         "success": True,

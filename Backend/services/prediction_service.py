@@ -107,7 +107,31 @@ SUGGESTIONS:
 2. [suggestion 2]
 3. [suggestion 3]"""
 
-    result = await generate_response(prompt)
+    try:
+        result = await generate_response(prompt)
+    except Exception as e:
+        print(f"⚠️ Prediction AI call failed: {e}")
+        result = None
+
+    # If AI returned a rate-limit message or failed, use data-driven fallback
+    if not result or "rate-limited" in str(result).lower() or "⏳" in str(result):
+        fallback_summaries = {
+            "success": f"Great work! You've completed {score_data['completed_tasks']} of {score_data['total_tasks']} tasks ({score_data['completion_rate']}% rate). Keep the momentum going!",
+            "partial": f"You have {score_data['pending_tasks']} pending tasks with a {score_data['completion_rate']}% completion rate. Focus on your overdue items to improve.",
+            "failure": f"Heads up — {score_data['missed_tasks']} tasks are overdue and your completion rate is {score_data['completion_rate']}%. Time to prioritize and knock out the urgent ones.",
+        }
+        fallback_suggestions = {
+            "success": ["Set new goals to maintain your streak.", "Challenge yourself with harder tasks.", "Help a friend stay productive too."],
+            "partial": ["Focus on overdue items first.", "Break larger tasks into smaller steps.", "Set aside dedicated focus time."],
+            "failure": ["Start with your most overdue task.", "Clear 2 quick wins to build momentum.", "Review and remove tasks you won't do."],
+        }
+        return {
+            "success": True,
+            "prediction": prediction,
+            "confidence": confidence_pct,
+            "summary": fallback_summaries.get(prediction, fallback_summaries["partial"]),
+            "suggestions": fallback_suggestions.get(prediction, fallback_suggestions["partial"]),
+        }
 
     # Parse the AI response for summary and suggestions
     summary = result

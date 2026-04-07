@@ -1,12 +1,17 @@
 """
-ai_handler.py — AI Integration Layer
+ai_handler.py — AI Integration Layer (Hardened)
 Supports Groq (primary, fast) and Gemini (fallback).
-Handles all communication with AI APIs.
+Features:
+  - Exponential backoff on retries
+  - In-memory TTL cache to avoid duplicate API calls
+  - Graceful fallback messages when both providers fail
 """
 
 import os
 import json
 import asyncio
+import hashlib
+import time
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -21,8 +26,49 @@ _gemini_model = None
 
 # Retry config
 MAX_RETRIES = 3
-RETRY_DELAY_SECONDS = 3
+BASE_DELAY = 2          # seconds — doubles each retry (2s, 4s, 8s)
+MAX_DELAY = 15           # cap for exponential backoff
 
+# ─── Simple In-Memory Cache ───
+_cache: dict[str, dict] = {}   # key → {"value": str, "expires": float}
+CACHE_TTL = 300                # 5 minutes
+
+
+def _cache_key(prompt: str) -> str:
+    """Generate a short hash key from the prompt."""
+    return hashlib.md5(prompt.encode()).hexdigest()
+
+
+def _cache_get(prompt: str) -> str | None:
+    """Return cached response if still valid, else None."""
+    key = _cache_key(prompt)
+    entry = _cache.get(key)
+    if entry and time.time() < entry["expires"]:
+        return entry["value"]
+    # Expired — evict
+    _cache.pop(key, None)
+    return None
+
+
+def _cache_set(prompt: str, value: str):
+    """Store a response in cache with TTL."""
+    key = _cache_key(prompt)
+    _cache[key] = {"value": value, "expires": time.time() + CACHE_TTL}
+
+    # Prevent unbounded growth — evict oldest entries if cache is too big
+    if len(_cache) > 200:
+        _evict_expired()
+
+
+def _evict_expired():
+    """Remove all expired cache entries."""
+    now = time.time()
+    expired = [k for k, v in _cache.items() if now >= v["expires"]]
+    for k in expired:
+        del _cache[k]
+
+
+# ─── Provider Clients ───
 
 def _get_groq_client():
     """Lazy-init Groq client."""
@@ -53,6 +99,14 @@ def _is_rate_limit_error(error: Exception) -> bool:
     return "429" in error_str or "quota" in error_str or "rate" in error_str or "resource" in error_str
 
 
+def _backoff_delay(attempt: int) -> float:
+    """Exponential backoff: 2s → 4s → 8s, capped at MAX_DELAY."""
+    delay = min(BASE_DELAY * (2 ** attempt), MAX_DELAY)
+    return delay
+
+
+# ─── Provider Calls ───
+
 async def _call_groq(prompt: str) -> str | None:
     """Call Groq API. Returns text or None on failure."""
     client = _get_groq_client()
@@ -72,7 +126,10 @@ async def _call_groq(prompt: str) -> str | None:
             return response.choices[0].message.content
         return None
     except Exception as e:
-        print(f"⚠️ Groq error: {e}")
+        if _is_rate_limit_error(e):
+            print(f"⏳ Groq rate-limited: {e}")
+        else:
+            print(f"⚠️ Groq error: {e}")
         return None
 
 
@@ -94,30 +151,44 @@ async def _call_gemini(prompt: str) -> str | None:
         return None
 
 
+# ─── Public API ───
+
 async def generate_response(prompt: str) -> str:
     """
     Send a prompt to AI and return text response.
     Uses Groq as primary, Gemini as fallback.
+    Includes: caching, exponential backoff, graceful degradation.
     """
     # Check if any provider is configured
     if not GROQ_API_KEY and not GEMINI_API_KEY:
         return "⚠️ No AI API key is set. Add GROQ_API_KEY or GEMINI_API_KEY to Backend/.env to enable AI features."
 
+    # Check cache first
+    cached = _cache_get(prompt)
+    if cached:
+        print("✅ Cache hit — returning cached AI response")
+        return cached
+
+    last_error = None
+
     for attempt in range(MAX_RETRIES):
         # Try Groq first (fast, generous limits)
         result = await _call_groq(prompt)
         if result:
+            _cache_set(prompt, result)
             return result
 
         # Fallback to Gemini
         result = await _call_gemini(prompt)
         if result:
+            _cache_set(prompt, result)
             return result
 
-        # Both failed — retry with delay
+        # Both failed — exponential backoff before retry
         if attempt < MAX_RETRIES - 1:
-            print(f"⏳ AI attempt {attempt + 1}/{MAX_RETRIES} failed. Retrying in {RETRY_DELAY_SECONDS}s...")
-            await asyncio.sleep(RETRY_DELAY_SECONDS)
+            delay = _backoff_delay(attempt)
+            print(f"⏳ AI attempt {attempt + 1}/{MAX_RETRIES} failed. Retrying in {delay:.0f}s...")
+            await asyncio.sleep(delay)
 
     return (
         "⏳ AI is temporarily rate-limited (too many requests). "
@@ -130,11 +201,21 @@ async def generate_json_response(prompt: str) -> dict:
     """
     Send a prompt to AI and parse the response as JSON.
     Uses Groq as primary, Gemini as fallback.
+    Includes: caching, exponential backoff, graceful degradation.
     """
     json_prompt = prompt + "\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no code fences, no extra text."
 
     if not GROQ_API_KEY and not GEMINI_API_KEY:
         return {"error": "No AI API key is set. Add GROQ_API_KEY or GEMINI_API_KEY to Backend/.env to enable AI features."}
+
+    # Check cache first
+    cached = _cache_get(json_prompt)
+    if cached:
+        print("✅ Cache hit — returning cached JSON response")
+        try:
+            return json.loads(cached)
+        except json.JSONDecodeError:
+            pass  # Cache had bad JSON, refetch
 
     for attempt in range(MAX_RETRIES):
         # Try Groq first
@@ -151,16 +232,20 @@ async def generate_json_response(prompt: str) -> dict:
                     lines = text.split("\n")
                     lines = [l for l in lines if not l.strip().startswith("```")]
                     text = "\n".join(lines).strip()
-                return json.loads(text)
+                parsed = json.loads(text)
+                _cache_set(json_prompt, text)  # Cache the cleaned text
+                return parsed
             except json.JSONDecodeError:
                 if attempt < MAX_RETRIES - 1:
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(_backoff_delay(attempt))
                     continue
                 return {"raw_response": raw, "error": "Failed to parse JSON"}
 
-        # Both failed — retry
+        # Both failed — exponential backoff before retry
         if attempt < MAX_RETRIES - 1:
-            await asyncio.sleep(RETRY_DELAY_SECONDS)
+            delay = _backoff_delay(attempt)
+            print(f"⏳ JSON AI attempt {attempt + 1}/{MAX_RETRIES} failed. Retrying in {delay:.0f}s...")
+            await asyncio.sleep(delay)
 
     return {
         "error": (
