@@ -82,7 +82,7 @@ export default function About() {
           <div className="builder-card">
             <div className="builder-avatar">⚡</div>
             <div className="builder-name">ETERNITYX</div>
-            <div className="builder-role">AI PRODUCT TEAM</div>
+            <div className="builder-role">A TEAM OF FOUR</div>
             <span className="builder-tag builder-tag--eng">INNOVATION</span>
           </div>
         </div>

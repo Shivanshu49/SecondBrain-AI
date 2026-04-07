@@ -80,6 +80,7 @@ export default function Dashboard() {
 
   const taskInputRef = useRef(null)
   const scoreAnimRef = useRef(null)
+  const dividerRef = useRef(null)
 
   const loadDashboard = useCallback(async () => {
     setError(null)
@@ -293,6 +294,10 @@ export default function Dashboard() {
   const handleStartTask = () => {
     setStartBtnText('✓ STARTED')
     setStartBtnActive(true)
+    // Smooth scroll to the divider between sections
+    if (dividerRef.current) {
+      dividerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
     setTimeout(() => {
       setStartBtnText('START TASK →')
       setStartBtnActive(false)
@@ -318,156 +323,170 @@ export default function Dashboard() {
       )}
 
       <div className="dash-grid">
-        <div className="card card-tasks" id="card-tasks">
-          <div className="card-label">📋 TASKS</div>
-          <div className="task-list" id="task-list">
-            {tasks.length === 0 && !loading && (
-              <div className="task-row task-row--empty">No tasks yet. Add one below — data syncs with the FastAPI backend.</div>
-            )}
-            {tasks.map((task) => (
-              <div className="task-row" key={task.id}>
-                <span
-                  className={`dash-task-check ${task.done ? 'dash-task-check--done' : 'dash-task-check--empty'}`}
-                  onClick={() => toggleTask(task.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && toggleTask(task.id)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {task.done ? '✓' : ''}
-                </span>
-                <span className={`task-text ${task.done ? 'task-text--done' : ''}`}>{task.text}</span>
-                <span className="task-due">{task.due}</span>
-              </div>
-            ))}
-          </div>
-          <button
-            className="dash-btn btn-add"
-            onClick={() => {
-              setShowForm(!showForm)
-              if (!showForm) setTimeout(() => taskInputRef.current?.focus(), 50)
-            }}
-          >
-            + ADD TASK
-          </button>
+        {/* ===== SECTION 1: HERO (Tasks + Score/Decision) ===== */}
+        <div className="dash-section dash-section--hero">
+          <div className="card card-tasks" id="card-tasks">
+            <div className="card-label">📋 TASKS</div>
+            <div className="task-list" id="task-list">
+              {tasks.length === 0 && !loading && (
+                <div className="task-row task-row--empty">No tasks yet. Add one below — data syncs with the FastAPI backend.</div>
+              )}
+              {tasks.map((task) => (
+                <div className="task-row" key={task.id}>
+                  <span
+                    className={`dash-task-check ${task.done ? 'dash-task-check--done' : 'dash-task-check--empty'}`}
+                    onClick={() => toggleTask(task.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && toggleTask(task.id)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    {task.done ? '✓' : ''}
+                  </span>
+                  <span className={`task-text ${task.done ? 'task-text--done' : ''}`}>{task.text}</span>
+                  <span className="task-due">{task.due}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              className="dash-btn btn-add"
+              onClick={() => {
+                setShowForm(!showForm)
+                if (!showForm) setTimeout(() => taskInputRef.current?.focus(), 50)
+              }}
+            >
+              + ADD TASK
+            </button>
 
-          {showForm && (
-            <div className="add-task-form">
-              <input
-                ref={taskInputRef}
-                type="text"
-                className="task-input"
-                placeholder="Task name..."
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTask()}
-              />
-              <input
-                type="datetime-local"
-                className="task-input task-input--sm"
-                value={taskDueLocal}
-                onChange={(e) => setTaskDueLocal(e.target.value)}
-              />
-              <button type="button" className="dash-btn btn-confirm" onClick={addTask}>
-                ADD
+            {showForm && (
+              <div className="add-task-form">
+                <input
+                  ref={taskInputRef}
+                  type="text"
+                  className="task-input"
+                  placeholder="Task name..."
+                  value={taskName}
+                  onChange={(e) => setTaskName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addTask()}
+                />
+                <input
+                  type="datetime-local"
+                  className="task-input task-input--sm"
+                  value={taskDueLocal}
+                  onChange={(e) => setTaskDueLocal(e.target.value)}
+                />
+                <button type="button" className="dash-btn btn-confirm" onClick={addTask}>
+                  ADD
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="dash-section-right">
+            <div className="card card-score" id="card-score">
+              <div className="card-label">🧠 YOUR SCORE</div>
+              <div className="score-big">{mainScore}%</div>
+              <div className="score-breakdown">
+                <div className="score-row">
+                  <span className="score-row-label">PRODUCTIVITY</span>
+                  <div className="bar-track">
+                    <div className="bar-fill bar-fill--prod" data-target={prodTarget} style={{ width: 0 }}></div>
+                  </div>
+                  <span className="score-row-val">{prodScore}%</span>
+                </div>
+                <div className="score-row">
+                  <span className="score-row-label">CONSISTENCY</span>
+                  <div className="bar-track">
+                    <div className="bar-fill bar-fill--cons" data-target={consTarget} style={{ width: 0 }}></div>
+                  </div>
+                  <span className="score-row-val">{consScore}%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="card card-decision" id="card-decision">
+              <div className="card-label">🧠 DO THIS NOW</div>
+              <p className="decision-text">{decisionReason}</p>
+              <button
+                type="button"
+                className="dash-btn btn-start"
+                onClick={handleStartTask}
+                style={
+                  startBtnActive
+                    ? {
+                      background: 'var(--black)',
+                      color: 'var(--neon)',
+                      transform: 'translate(2px, 2px)',
+                      boxShadow: '2px 2px 0 var(--black)',
+                    }
+                    : {}
+                }
+              >
+                {startBtnText}
               </button>
             </div>
-          )}
-        </div>
-
-        <div className="card card-decision" id="card-decision">
-          <div className="card-label">🧠 DO THIS NOW</div>
-          <p className="decision-text">{decisionReason}</p>
-          <button
-            type="button"
-            className="dash-btn btn-start"
-            onClick={handleStartTask}
-            style={
-              startBtnActive
-                ? {
-                    background: 'var(--black)',
-                    color: 'var(--neon)',
-                    transform: 'translate(2px, 2px)',
-                    boxShadow: '2px 2px 0 var(--black)',
-                  }
-                : {}
-            }
-          >
-            {startBtnText}
-          </button>
-        </div>
-
-        <div className="card card-schedule" id="card-schedule">
-          <div className="card-label">⏱️ AI SCHEDULE</div>
-          <div className="schedule-list">
-            {scheduleRows.length === 0 && (
-              <div className="schedule-row schedule-row--muted">
-                <span className="schedule-task">{scheduleNotes || 'No schedule slots yet.'}</span>
-              </div>
-            )}
-            {scheduleRows.map((row, i) => (
-              <div className={`schedule-row ${i === 0 ? 'schedule-row--active' : ''}`} key={`${row.time}-${row.task}-${i}`}>
-                <span className="schedule-time">{row.time}</span>
-                <span className="schedule-sep">→</span>
-                <span className="schedule-task">{row.task}</span>
-                <span className={`schedule-status ${i === 0 ? 'schedule-status--now' : ''}`}>{i === 0 ? 'NOW' : ''}</span>
-              </div>
-            ))}
           </div>
         </div>
 
-        <div className="card card-score" id="card-score">
-          <div className="card-label">🧠 YOUR SCORE</div>
-          <div className="score-big">{mainScore}%</div>
-          <div className="score-breakdown">
-            <div className="score-row">
-              <span className="score-row-label">PRODUCTIVITY</span>
-              <div className="bar-track">
-                <div className="bar-fill bar-fill--prod" data-target={prodTarget} style={{ width: 0 }}></div>
-              </div>
-              <span className="score-row-val">{prodScore}%</span>
+        {/* ===== SECTION DIVIDER ===== */}
+        <div className="dash-divider" ref={dividerRef}></div>
+
+        {/* ===== SECTION 2: SCHEDULE (Schedule + Alert/Prediction/Music) ===== */}
+        <div className="dash-section dash-section--schedule">
+          <div className="card card-schedule" id="card-schedule">
+            <div className="card-label">⏱️ AI SCHEDULE</div>
+            <div className="schedule-list">
+              {scheduleRows.length === 0 && (
+                <div className="schedule-row schedule-row--muted">
+                  <span className="schedule-task">{scheduleNotes || 'No schedule slots yet.'}</span>
+                </div>
+              )}
+              {scheduleRows.map((row, i) => (
+                <div className={`schedule-row ${i === 0 ? 'schedule-row--active' : ''}`} key={`${row.time}-${row.task}-${i}`}>
+                  <span className="schedule-time">{row.time}</span>
+                  <span className="schedule-sep">→</span>
+                  <span className="schedule-task">{row.task}</span>
+                  <span className={`schedule-status ${i === 0 ? 'schedule-status--now' : ''}`}>{i === 0 ? 'NOW' : ''}</span>
+                </div>
+              ))}
             </div>
-            <div className="score-row">
-              <span className="score-row-label">CONSISTENCY</span>
-              <div className="bar-track">
-                <div className="bar-fill bar-fill--cons" data-target={consTarget} style={{ width: 0 }}></div>
+          </div>
+
+          <div className="dash-section-right">
+            <div className="card card-alert" id="card-alert">
+              <div className="card-label">⚠️ ALERT</div>
+              <div className="alert-box">
+                <div className="alert-icon">🚨</div>
+                <p className="alert-text">{alertPrimary}</p>
               </div>
-              <span className="score-row-val">{consScore}%</span>
+              {alertSub && <div className="alert-sub">{alertSub}</div>}
+            </div>
+
+            <div className="card card-prediction" id="card-prediction">
+              <div className="card-label">🔮 PREDICTION</div>
+              <div className="prediction-box">
+                <div className="prediction-icon">⚠</div>
+                <p className="prediction-text">{predText}</p>
+              </div>
+              <div className="prediction-confidence">
+                <span>CONFIDENCE:</span>
+                <span className="confidence-val">{confidencePct}%</span>
+              </div>
+            </div>
+
+            <div className="card card-music" id="card-music">
+              <div className="card-label">🎵 FOCUS MODE</div>
+              <iframe
+                style={{ border: 0, width: '100%', height: '100%', minHeight: '80px' }}
+                src="https://open.spotify.com/embed/playlist/0vvXsWCC9xrXsKd4FyS8kM?utm_source=generator&theme=0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                title="Spotify Focus Playlist"
+              ></iframe>
             </div>
           </div>
         </div>
 
-        <div className="card card-prediction" id="card-prediction">
-          <div className="card-label">🔮 PREDICTION</div>
-          <div className="prediction-box">
-            <div className="prediction-icon">⚠</div>
-            <p className="prediction-text">{predText}</p>
-          </div>
-          <div className="prediction-confidence">
-            <span>CONFIDENCE:</span>
-            <span className="confidence-val">{confidencePct}%</span>
-          </div>
-        </div>
-
-        <div className="card card-alert" id="card-alert">
-          <div className="card-label">⚠️ ALERT</div>
-          <div className="alert-box">
-            <div className="alert-icon">🚨</div>
-            <p className="alert-text">{alertPrimary}</p>
-          </div>
-          {alertSub && <div className="alert-sub">{alertSub}</div>}
-        </div>
-
-        <div className="card card-music" id="card-music">
-          <div className="card-label">🎵 FOCUS MODE</div>
-          <iframe
-            style={{ border: 0, width: '100%', height: '100%', minHeight: '80px' }}
-            src="https://open.spotify.com/embed/playlist/0vvXsWCC9xrXsKd4FyS8kM?utm_source=generator&theme=0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-            title="Spotify Focus Playlist"
-          ></iframe>
-        </div>
-
+        {/* ===== SECTION 3: FEATURES (Full Width) ===== */}
         <div className="card card-features" id="card-features">
           <div className="card-label">🚀 UPCOMING FEATURES</div>
           <div className="features-grid">
@@ -495,19 +514,11 @@ export default function Dashboard() {
               </div>
               <span className="feature-tag feature-tag--planned">Q3</span>
             </div>
-            <div className="feature-item">
-              <span className="feature-icon">🧬</span>
-              <div>
-                <div className="feature-title">HABIT DNA</div>
-                <div className="feature-desc">AI maps your habit patterns and suggests optimizations</div>
-              </div>
-              <span className="feature-tag feature-tag--planned">Q4</span>
-            </div>
           </div>
         </div>
       </div>
 
-      <FloatingElements items={['AI THINKING', 'OPTIMIZED', 'NO EXCUSES', '→', '◆', '▲']} />
+      <FloatingElements items={['AI THINKING', 'OPTIMIZED', 'NO EXCUSES', '→', '', '']} />
     </main>
   )
 }

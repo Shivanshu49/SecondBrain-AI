@@ -3,29 +3,31 @@
    ========================================= */
 
 /* ---------- RESET & BASE ---------- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 :root {
-  --black:    #0a0a0a;
-  --white:    #f5f0e8;
-  --neon:     #b9ff66;
-  --yellow:   #ffe156;
-  --blue:     #5271ff;
-  --red:      #ff5c5c;
-  --pink:     #ff8fe8;
-  --orange:   #ffa64d;
+  --black: #0a0a0a;
+  --white: #f5f0e8;
+  --neon: #b9ff66;
+  --yellow: #ffe156;
+  --blue: #5271ff;
+  --red: #ff5c5c;
+  --pink: #ff8fe8;
+  --orange: #ffa64d;
 
-  --border:   3px solid var(--black);
-  --shadow:   5px 5px 0 var(--black);
+  --border: 3px solid var(--black);
+  --shadow: 5px 5px 0 var(--black);
   --shadow-sm: 3px 3px 0 var(--black);
   --shadow-lg: 8px 8px 0 var(--black);
 
   --font-display: 'Space Grotesk', sans-serif;
-  --font-mono:    'Space Mono', monospace;
+  --font-mono: 'Space Mono', monospace;
 }
 
 html {
@@ -40,7 +42,10 @@ body {
   overflow-x: hidden;
 }
 
-a { text-decoration: none; color: inherit; }
+a {
+  text-decoration: none;
+  color: inherit;
+}
 
 /* ---------- BACKGROUND GRID ---------- */
 body::before {
@@ -48,7 +53,7 @@ body::before {
   position: fixed;
   inset: 0;
   background-image:
-    radial-gradient(circle, rgba(10,10,10,0.06) 1px, transparent 1px);
+    radial-gradient(circle, rgba(10, 10, 10, 0.06) 1px, transparent 1px);
   background-size: 28px 28px;
   pointer-events: none;
   z-index: 0;
@@ -68,6 +73,11 @@ body::before {
   height: 64px;
   background: var(--white);
   border-bottom: var(--border);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#navbar.navbar--hidden {
+  transform: translateY(-100%);
 }
 
 #navbar.navbar--dashboard {
@@ -112,7 +122,9 @@ body::before {
   align-items: center;
 }
 
-.navbar--dashboard .nav-links { gap: 6px; }
+.navbar--dashboard .nav-links {
+  gap: 6px;
+}
 
 /* Landing/About nav links */
 .nav-link {
@@ -237,7 +249,8 @@ body::before {
   box-shadow: 1px 1px 0 var(--black);
 }
 
-.icon-sun, .icon-moon {
+.icon-sun,
+.icon-moon {
   position: absolute;
   font-size: 1.2rem;
   transition: opacity 0.35s ease, transform 0.4s ease;
@@ -267,14 +280,17 @@ body::before {
     opacity: 1;
     clip-path: circle(0% at var(--reveal-x) var(--reveal-y));
   }
+
   45% {
     opacity: 1;
     clip-path: circle(150% at var(--reveal-x) var(--reveal-y));
   }
+
   55% {
     opacity: 1;
     clip-path: circle(150% at var(--reveal-x) var(--reveal-y));
   }
+
   100% {
     opacity: 0;
     clip-path: circle(150% at var(--reveal-x) var(--reveal-y));
@@ -402,8 +418,8 @@ body::before {
 }
 
 .float-5 {
-  top: 30%;
-  left: 50%;
+  top: 10%;
+  left: 5%;
   font-size: 1.3rem;
   color: var(--neon);
   text-shadow: 2px 2px 0 var(--black);
@@ -412,8 +428,8 @@ body::before {
 }
 
 .float-6 {
-  top: 70%;
-  right: 40%;
+  top: 90%;
+  right: 97%;
   font-size: 1.5rem;
   color: var(--blue);
   text-shadow: 2px 2px 0 var(--black);
@@ -421,13 +437,25 @@ body::before {
 }
 
 @keyframes floatBob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 @keyframes floatSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ========== ENTRANCE ANIMATION ========== */
@@ -440,7 +468,9 @@ body::before {
 
 /* ========== RESPONSIVE (GLOBAL) ========== */
 @media (max-width: 900px) {
-  .float { display: none; }
+  .float {
+    display: none;
+  }
 }
 
 @media (max-width: 500px) {
@@ -448,11 +478,16 @@ body::before {
     padding: 0 16px;
     height: 56px;
   }
-  .nav-logo { font-size: 1.1rem; }
+
+  .nav-logo {
+    font-size: 1.1rem;
+  }
+
   .nav-link {
     font-size: 0.7rem;
     padding: 6px 12px;
   }
+
   .btn {
     padding: 12px 22px;
     font-size: 0.82rem;
@@ -463,36 +498,64 @@ body::before {
    DARK MODE
    ========================================================== */
 
-body, #navbar, .nav-logo, .nav-link, .btn,
-.card, .card-label, .bar-track,
-.prediction-box, .alert-box,
-.task-row, .schedule-row,
-.feature-item, .decision-text,
-.theme-toggle, .task-input,
-.score-row-label, .score-row-val,
-.task-text, .schedule-time, .schedule-task,
-.prediction-confidence, .alert-sub,
-.feature-title, .feature-desc,
-.dashboard-card, .card-section, .score-bar,
-.hero-sub, .hero-heading, .section-label,
-.ai-message, .ai-label, .score-value,
-.task-item, .card-title,
-.mission-card, .principle-card,
-.builder-card, .stat-block,
-.cta-banner, .about-footer,
+body,
+#navbar,
+.nav-logo,
+.nav-link,
+.btn,
+.card,
+.card-label,
+.bar-track,
+.prediction-box,
+.alert-box,
+.task-row,
+.schedule-row,
+.feature-item,
+.decision-text,
+.theme-toggle,
+.task-input,
+.score-row-label,
+.score-row-val,
+.task-text,
+.schedule-time,
+.schedule-task,
+.prediction-confidence,
+.alert-sub,
+.feature-title,
+.feature-desc,
+.dashboard-card,
+.card-section,
+.score-bar,
+.hero-sub,
+.hero-heading,
+.section-label,
+.ai-message,
+.ai-label,
+.score-value,
+.task-item,
+.card-title,
+.mission-card,
+.principle-card,
+.builder-card,
+.stat-block,
+.cta-banner,
+.about-footer,
 .system-list li,
-.about-subtitle, .section-body,
-.mission-text, .principle-title,
-.principle-desc, .builder-role {
+.about-subtitle,
+.section-body,
+.mission-text,
+.principle-title,
+.principle-desc,
+.builder-role {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 [data-theme="dark"] {
-  --neon:   #a3e635;
+  --neon: #a3e635;
   --yellow: #facc15;
-  --blue:   #6d8cff;
-  --red:    #ff6b6b;
-  --pink:   #ff9cf0;
+  --blue: #6d8cff;
+  --red: #ff6b6b;
+  --pink: #ff9cf0;
 }
 
 [data-theme="dark"] body {
@@ -502,7 +565,7 @@ body, #navbar, .nav-logo, .nav-link, .btn,
 
 [data-theme="dark"] body::before {
   background-image:
-    radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+    radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 
 /* ---- Navbar Dark ---- */

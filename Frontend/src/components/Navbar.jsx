@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from './ThemeProvider.jsx'
 import { useAuth } from './AuthProvider.jsx'
@@ -8,6 +9,31 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const { isAuthenticated, logout, user } = useAuth()
   const isApp = ['/dashboard', '/tasks', '/ai', '/schedule'].includes(location.pathname)
+
+  const [hidden, setHidden] = useState(false)
+  const lastScrollY = useRef(0)
+
+  useEffect(() => {
+    const THRESHOLD = 10
+
+    const handleScroll = () => {
+      const currentY = window.scrollY
+      if (currentY < THRESHOLD) {
+        // Always show at top
+        setHidden(false)
+      } else if (currentY > lastScrollY.current + THRESHOLD) {
+        // Scrolling down
+        setHidden(true)
+      } else if (currentY < lastScrollY.current - THRESHOLD) {
+        // Scrolling up
+        setHidden(false)
+      }
+      lastScrollY.current = currentY
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const handleAboutClick = (e) => {
     e.preventDefault()
@@ -28,14 +54,14 @@ export default function Navbar() {
   }
 
   return (
-    <nav id="navbar" className={isApp ? 'navbar--dashboard' : ''}>
+    <nav id="navbar" className={`${isApp ? 'navbar--dashboard' : ''}${hidden ? ' navbar--hidden' : ''}`}>
       <Link to={isAuthenticated ? '/dashboard' : '/'} className="nav-logo">
         SecondBrain <span className="logo-accent">AI</span>
       </Link>
       <div className="nav-links">
         {isApp ? (
           <>
-            <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'nav-link--active' : ''}`} id="nav-dashboard">Dashboard</Link>
+            {/* <Link to="/dashboard" className={`nav-link ${location.pathname === '/dashboard' ? 'nav-link--active' : ''}`} id="nav-dashboard">Dashboard</Link> */}
             <Link to="/tasks" className={`nav-link ${location.pathname === '/tasks' ? 'nav-link--active' : ''}`} id="nav-tasks">Tasks</Link>
             <Link to="/ai" className={`nav-link ${location.pathname === '/ai' ? 'nav-link--active' : ''}`} id="nav-ai">AI</Link>
             <Link to="/schedule" className={`nav-link ${location.pathname === '/schedule' ? 'nav-link--active' : ''}`} id="nav-schedule">Schedule</Link>
